@@ -270,9 +270,12 @@ function displayResult(gameName, key, lvl, best, threshold, passed, forceFail, n
 
     // تعیین عملیات بعدی (ارزیابی / تمرین روزانه / عادی)
     if (window.isInAssessment) {
-        // فرمول جدید: ۷۰٪ وزن برای امتیاز، ۳۰٪ وزن برای دقت (جان‌های باقی‌مانده)
-        const scorePct = Math.min(100, (currentGameScore / threshold) * 100);
+        // فرمول سخت‌گیرانه‌تر: برای ۱۰۰٪ باید ۲.۵ برابر حد نصاب امتیاز بگیری
+        const maxBenchmark = threshold * 2.5; 
+        const scorePct = Math.min(100, (currentGameScore / maxBenchmark) * 100);
         const heartPct = (heartsLeft / totalHearts) * 100;
+        
+        // وزن: ۷۰٪ برای امتیاز، ۳۰٪ برای جان‌های باقی‌مانده
         const percentage = Math.round((scorePct * 0.7) + (heartPct * 0.3));
         
         state.cognitiveProfile[meta.domain] = percentage; 

@@ -550,11 +550,11 @@ function startAssessment() {
     state.currentAssessmentQueue = assessmentGames;
     state.currentAssessmentIndex = 0;
     
-    // ذخیره‌ی سطح‌های اصلی و اجبار به سطح ۱
+    // ذخیره‌ی سطح‌های اصلی و اجبار به سطح ۳ (برای ارزیابی واقعی)
     state._savedLevelsForAssessment = {};
     assessmentGames.forEach(key => {
         state._savedLevelsForAssessment[key] = state.games[key].level;
-        state.games[key].level = 1;
+        state.games[key].level = 3; // <--- ارزیابی در سطح ۳ انجام می‌شود
     });
     
     window.forceAssessmentLevel1 = true;
