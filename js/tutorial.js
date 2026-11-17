@@ -1,14 +1,17 @@
 // =====================================================
-// TUTORIAL - سیستم آموزش بازی‌ها
+// TUTORIAL - سیستم آموزش بصری و تعاملی
 // =====================================================
 
-// Helper: ساخت دموی ساده‌ی یکسان
-function createSimpleDemo(instruction, items, isCorrectFn, correctFeedback) {
+let _tutorialOnComplete = null;
+let _tutorialAnimTimeout = null;
+
+// تابع کمکی برای ساخت دموهای کلیکی
+function createSimpleDemo(instruction, items, isCorrectFn) {
     return function(container, onCorrect) {
         container.innerHTML = `
-            <p style="font-weight:700; font-size:15px; margin-top:0;">${instruction}</p>
-            <div class="tut-demo-grid" id="tut-demo-grid"></div>
-            <div class="tut-feedback" id="tut-feedback"></div>
+            <p style="font-weight:700; font-size:16px; margin-top:0; text-align:center; color:#0984e3;">${instruction}</p>
+            <div class="tut-demo-grid" id="tut-demo-grid" style="display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin-top:10px;"></div>
+            <div class="tut-feedback" id="tut-feedback" style="text-align:center; margin-top:10px; font-weight:bold;"></div>
         `;
         const grid = container.querySelector('#tut-demo-grid');
         const fb = container.querySelector('#tut-feedback');
@@ -17,20 +20,16 @@ function createSimpleDemo(instruction, items, isCorrectFn, correctFeedback) {
         items.forEach(item => {
             const btn = document.createElement('button');
             btn.className = 'tut-demo-item';
-            if (item.isHtml) btn.innerHTML = item.value;
-            else btn.innerText = item.value;
+            btn.innerText = item.value;
             btn.onclick = () => {
                 if (solved) return;
-                if (isCorrectFn(item.value, item)) {
+                if (isCorrectFn(item.value)) {
                     solved = true;
                     playSound('correct');
                     btn.classList.add('correct');
-                    grid.querySelectorAll('button').forEach(b => {
-                        b.disabled = true;
-                        if (b !== btn) b.style.opacity = '0.4';
-                    });
+                    grid.querySelectorAll('button').forEach(b => { b.disabled = true; if(b!==btn) b.style.opacity='0.3'; });
                     fb.style.color = '#27ae60';
-                    fb.innerText = correctFeedback || '✅ آفرین!';
+                    fb.innerText = '✅ آفرین!';
                     onCorrect();
                 } else {
                     playSound('wrong');
@@ -45,509 +44,328 @@ function createSimpleDemo(instruction, items, isCorrectFn, correctFeedback) {
     };
 }
 
-// =====================================================
-// داده‌های آموزش هر بازی
-// =====================================================
-
 const TUTORIALS = {
-    // ============ استروپ روز و شب (junior) ============
+    // ============ ۱. استروپ روز و شب ============
     stroop_junior: {
-        rules: [
-            '☀️ وقتی خورشید می‌بینی، بگو «شب»',
-            '🌙 وقتی ماه می‌بینی، بگو «روز»',
-            '🤔 همیشه برعکس جواب بده!'
-        ],
         demo: function(container, onCorrect) {
-            const correct = 'night';
+            // به جای دموی کلیکی، یک انیمیشن نمایشی کوچک نشان می‌دهیم
             container.innerHTML = `
-                <p style="font-weight:700; font-size:15px; margin-top:0;">این چیه؟ (یادت باشه برعکس بگو!)</p>
-                <div style="font-size:90px; text-align:center; margin:15px 0;">☀️</div>
-                <div class="tut-demo-grid" id="tut-demo-grid" style="grid-template-columns:repeat(2,1fr);"></div>
-                <div class="tut-feedback" id="tut-feedback"></div>
+                <p style="font-weight:700; font-size:15px; text-align:center; color:#0984e3;">وقتی خورشید ☀️ دیدی، بگو شب! و برعکس!</p>
+                <div style="display:flex; justify-content:center; gap:20px; margin-top:15px;">
+                    <button class="tut-demo-item" onclick="this.classList.add('correct'); playSound('correct'); setTimeout(()=>arguments[0](), 500);">🌙 شب</button>
+                    <button class="tut-demo-item" onclick="this.classList.add('wrong'); playSound('wrong');">☀️ روز</button>
+                </div>
+                <div style="font-size:50px; text-align:center; margin-top:20px;">☀️</div>
             `;
-            const grid = container.querySelector('#tut-demo-grid');
-            const fb = container.querySelector('#tut-feedback');
-            let solved = false;
-
-            [
-                { name: 'روز ☀️', val: 'day' },
-                { name: 'شب 🌙', val: 'night' }
-            ].forEach(opt => {
-                const btn = document.createElement('button');
-                btn.className = 'tut-demo-item';
-                btn.innerText = opt.name;
-                btn.style.aspectRatio = 'auto';
-                btn.style.minHeight = '60px';
-                btn.style.fontSize = '20px';
-                btn.style.padding = '15px';
-                btn.onclick = () => {
-                    if (solved) return;
-                    if (opt.val === correct) {
-                        solved = true;
-                        playSound('correct');
-                        btn.classList.add('correct');
-                        grid.querySelectorAll('button').forEach(b => {
-                            b.disabled = true;
-                            if (b !== btn) b.style.opacity = '0.4';
-                        });
-                        fb.style.color = '#27ae60';
-                        fb.innerText = '✅ آفرین! خورشید یعنی باید بگی شب!';
-                        onCorrect();
+            // اصلاح منطق دمو
+            container.innerHTML = `
+                <p style="font-weight:700; font-size:15px; text-align:center; color:#0984e3;">خورشید ☀️ آمده! تو باید چی بگی؟</p>
+                <div style="font-size:60px; text-align:center; margin:10px 0;">☀️</div>
+                <div style="display:flex; justify-content:center; gap:15px;" id="demo-btns"></div>
+                <div id="demo-fb" style="text-align:center; margin-top:10px; font-weight:bold;"></div>
+            `;
+            const btns = container.querySelector('#demo-btns');
+            const fb = container.querySelector('#demo-fb');
+            
+            [{n: 'روز ☀️', v: 'day'}, {n: 'شب 🌙', v: 'night'}].forEach(opt => {
+                const b = document.createElement('button');
+                b.className = 'tut-demo-item'; b.innerText = opt.n;
+                b.onclick = () => {
+                    if (opt.v === 'night') {
+                        playSound('correct'); b.classList.add('correct'); 
+                        fb.style.color = '#27ae60'; fb.innerText = '✅ آفرین! برعکس گفتی!';
+                        btns.innerHTML = ''; onCorrect();
                     } else {
-                        playSound('wrong');
-                        btn.classList.add('wrong');
-                        fb.style.color = '#d63031';
-                        fb.innerText = '❌ دقت کن! خورشید یعنی باید بگی شب';
-                        setTimeout(() => btn.classList.remove('wrong'), 600);
+                        playSound('wrong'); b.classList.add('wrong');
+                        fb.style.color = '#d63031'; fb.innerText = '❌ دقت کن! خورشید یعنی باید بگی شب.';
                     }
                 };
-                grid.appendChild(btn);
+                btns.appendChild(b);
             });
         }
     },
 
-    // ============ استروپ رنگ یا کلمه (senior) ============
+    // ============ ۲. استروپ رنگ/کلمه ============
     stroop_senior: {
-        rules: [
-            '🎨 کلمه‌ای که می‌بینی، اسم یک رنگه',
-            '👀 ولی رنگ جوهرش ممکنه فرق کنه',
-            '✅ باید رنگ جوهر رو انتخاب کنی، نه اسم کلمه رو!'
-        ],
         demo: function(container, onCorrect) {
-            const word = 'آبی';
-            const inkColor = '#e74c3c';
-            const correct = 'قرمز';
-
             container.innerHTML = `
-                <p style="font-weight:700; font-size:15px; margin-top:0;">رنگ جوهر این کلمه چیه؟ (نه اسمش!)</p>
-                <div style="font-size:70px; font-weight:900; color:${inkColor}; text-align:center; margin:15px 0; min-height:90px; display:flex; align-items:center; justify-content:center;">${word}</div>
-                <div class="tut-demo-grid" id="tut-demo-grid" style="grid-template-columns:repeat(2,1fr);"></div>
-                <div class="tut-feedback" id="tut-feedback"></div>
+                <p style="font-weight:700; font-size:15px; text-align:center; color:#0984e3;">به رنگ جوهر نگاه کن، نه اسم کلمه!</p>
+                <div style="font-size:50px; font-weight:900; color:#e74c3c; text-align:center; margin:15px 0;">آبی</div>
+                <div style="display:flex; justify-content:center; gap:10px;" id="demo-btns"></div>
+                <div id="demo-fb" style="text-align:center; margin-top:10px; font-weight:bold;"></div>
             `;
-            const grid = container.querySelector('#tut-demo-grid');
-            const fb = container.querySelector('#tut-feedback');
-            let solved = false;
-
-            [
-                { name: 'آبی', color: '#3498db' },
-                { name: 'قرمز', color: '#e74c3c' },
-                { name: 'سبز', color: '#27ae60' },
-                { name: 'نارنجی', color: '#e67e22' }
-            ].forEach(opt => {
-                const btn = document.createElement('button');
-                btn.className = 'tut-demo-item';
-                btn.innerText = opt.name;
-                btn.style.background = opt.color;
-                btn.style.color = 'white';
-                btn.style.aspectRatio = 'auto';
-                btn.style.minHeight = '55px';
-                btn.style.fontSize = '18px';
-                btn.style.padding = '15px';
-                btn.onclick = () => {
-                    if (solved) return;
-                    if (opt.name === correct) {
-                        solved = true;
-                        playSound('correct');
-                        grid.querySelectorAll('button').forEach(b => {
-                            b.disabled = true;
-                            b.style.background = '';
-                            b.style.color = '';
-                            if (b !== btn) b.style.opacity = '0.4';
-                        });
-                        btn.classList.add('correct');
-                        fb.style.color = '#27ae60';
-                        fb.innerText = '✅ آفرین! رنگ جوهر قرمزه!';
-                        onCorrect();
+            const btns = container.querySelector('#demo-btns');
+            const fb = container.querySelector('#demo-fb');
+            
+            [{n: 'آبی', c: '#3498db'}, {n: 'قرمز', c: '#e74c3c'}].forEach(opt => {
+                const b = document.createElement('button');
+                b.className = 'tut-demo-item'; b.innerText = opt.n;
+                b.onclick = () => {
+                    if (opt.n === 'قرمز') {
+                        playSound('correct'); b.classList.add('correct'); 
+                        fb.style.color = '#27ae60'; fb.innerText = '✅ آفرین! رنگ جوهر قرمز بود!';
+                        btns.innerHTML = ''; onCorrect();
                     } else {
-                        playSound('wrong');
-                        btn.classList.add('wrong');
-                        fb.style.color = '#d63031';
-                        fb.innerText = '❌ به رنگ نوشته نگاه کن، نه اسمش!';
-                        setTimeout(() => btn.classList.remove('wrong'), 600);
+                        playSound('wrong'); b.classList.add('wrong');
+                        fb.style.color = '#d63031'; fb.innerText = '❌ گول اسمش رو نخور! رنگش چیه؟';
                     }
                 };
-                grid.appendChild(btn);
+                btns.appendChild(b);
             });
         }
     },
 
-    // ============ شکار حیوانات ============
+    // ============ ۳. شکار حیوانات ============
     numhunt_junior: {
-        rules: [
-            '👀 اول چند ثانیه تصاویر رو نگاه کن و جاهاشون رو حفظ کن',
-            '🎯 بعد فقط روی حیوون‌های هدف کلیک کن',
-            '⏱️ زمان محدوده، سریع باش!'
-        ],
         demo: createSimpleDemo(
-            'روی 🐱 (گربه) کلیک کن:',
-            [{ value: '🚗' }, { value: '🐱' }, { value: '🌻' }, { value: '⚽' }],
+            'فقط روی گربه 🐱 کلیک کن:',
+            [{ value: '🚗' }, { value: '🐱' }, { value: '⚽' }],
             (val) => val === '🐱'
         )
     },
 
-    // ============ شکار اعداد ============
+    // ============ ۴. شکار اعداد ============
     numhunt_senior: {
-        rules: [
-            '👀 اول اعداد رو ببین و جاهاشون رو حفظ کن',
-            '🎯 بعد فقط روی جای عدد هدف کلیک کن',
-            '⚠️ هر کلیک اشتباه، امتیاز منفی داره!',
-            '⏱️ زمان محدوده!'
-        ],
         demo: createSimpleDemo(
-            'روی عدد ۷ کلیک کن:',
-            [{ value: '۴' }, { value: '۷' }, { value: '۲' }, { value: '۹' }],
+            'فقط روی عدد ۷ کلیک کن:',
+            [{ value: '۴' }, { value: '۷' }, { value: '۲' }],
             (val) => val === '۷'
         )
     },
 
-    // ============ شکار میوه‌ها ============
+    // ============ ۵. شکار میوه‌ها ============
     wordhunt_junior: {
-         rules: [
-        '🍎 فقط روی میوه‌ها کلیک کن.',
-        '⏱️ این بازی زمان‌محور است! هرچه سریع‌تر همه را پیدا کنی، امتیاز بالاتری می‌گیری.',
-        '❌ هر کلیک اشتباه، ۲ ثانیه به زمان تو اضافه می‌کند!'
-    ],
         demo: createSimpleDemo(
-            'روی میوه کلیک کن:',
-            [{ value: '🍎' }, { value: '🚗' }, { value: '🌻' }, { value: '⚽' }],
-            (val) => ['🍎','🍌','🍇','🍉','🍓','🍒','🍑','🍍'].includes(val)
+            'فقط روی میوه کلیک کن:',
+            [{ value: '🚗' }, { value: '🍎' }, { value: '🌻' }],
+            (val) => val === '🍎'
         )
     },
 
-    // ============ شکار کلمات ============
+    // ============ ۶. شکار کلمات ============
     wordhunt_senior: {
-        rules: [
-        '🐾 فقط روی اسم حیوانات کلیک کن.',
-        '⏱️ سرعتِ عمل تو رکورد اصلی این بازی است. هرچه سریع‌تر، بهتر!',
-        '❌ هر کلیک اشتباه، ۲ ثانیه جریمه دارد.'
-    ],
         demo: createSimpleDemo(
-            'روی اسم حیوان کلیک کن:',
-            [{ value: 'گربه' }, { value: 'کتاب' }, { value: 'میز' }, { value: 'توپ' }],
-            (val) => ['میمون','گربه','شیر','خرس','اسب','ماهی','پلنگ','گرگ','روباه','زنبور','عقاب','دلفین','خرگوش','آهو'].includes(val)
+            'فقط روی اسم حیوان کلیک کن:',
+            [{ value: 'کتاب' }, { value: 'گربه' }, { value: 'میز' }],
+            (val) => val === 'گربه'
         )
     },
 
-    // ============ شکل‌های مخفی ============
+    // ============ ۷. شکل‌های مخفی ============
     shapehunt: {
-        rules: [
-            '🔍 فقط روی شکلی که در بالا نشون داده می‌شه کلیک کن',
-            '🎯 مثلاً اگه دایره قرمز بود، فقط دایره‌های قرمز رو بزن',
-            '⏱️ زمان محدوده!'
-        ],
         demo: function(container, onCorrect) {
-            const target = { type: 'circle', color: '#e74c3c' };
-            const items = [
-                { svg: getShapeSVG({ type: 'circle', color: '#e74c3c' }), correct: true },
-                { svg: getShapeSVG({ type: 'circle', color: '#3498db' }), correct: false },
-                { svg: getShapeSVG({ type: 'square', color: '#e74c3c' }), correct: false },
-                { svg: getShapeSVG({ type: 'circle', color: '#e74c3c' }), correct: true }
-            ];
+            const target = getShapeSVG({ type: 'circle', color: '#e74c3c' });
             container.innerHTML = `
-                <p style="font-weight:700; font-size:15px; margin-top:0;">فقط روی این شکل کلیک کن: <span class="target-display-box">${getShapeSVG(target)}</span></p>
-                <div class="tut-demo-grid" id="tut-demo-grid"></div>
-                <div class="tut-feedback" id="tut-feedback"></div>
+                <p style="font-weight:700; font-size:15px; text-align:center; color:#0984e3;">فقط روی این شکل کلیک کن:</p>
+                <div style="display:flex; justify-content:center; margin:10px 0;"><span class="target-display-box" style="width:50px; height:50px;">${target}</span></div>
+                <div style="display:flex; justify-content:center; gap:10px;" id="demo-btns"></div>
+                <div id="demo-fb" style="text-align:center; margin-top:10px; font-weight:bold;"></div>
             `;
-            const grid = container.querySelector('#tut-demo-grid');
-            const fb = container.querySelector('#tut-feedback');
-            let solved = false;
-
-            items.forEach(item => {
-                const btn = document.createElement('button');
-                btn.className = 'tut-demo-item';
-                btn.innerHTML = item.svg;
-                btn.onclick = () => {
-                    if (solved) return;
-                    if (item.correct) {
-                        solved = true;
-                        playSound('correct');
-                        btn.classList.add('correct');
-                        grid.querySelectorAll('button').forEach(b => {
-                            b.disabled = true;
-                            if (b !== btn) b.style.opacity = '0.4';
-                        });
-                        fb.style.color = '#27ae60';
-                        fb.innerText = '✅ آفرین!';
-                        onCorrect();
+            const btns = container.querySelector('#demo-btns');
+            const fb = container.querySelector('#demo-fb');
+            
+            [
+                { svg: getShapeSVG({ type: 'circle', color: '#3498db' }), ok: false },
+                { svg: target, ok: true }
+            ].forEach(opt => {
+                const b = document.createElement('button');
+                b.className = 'tut-demo-item'; b.innerHTML = opt.svg;
+                b.onclick = () => {
+                    if (opt.ok) {
+                        playSound('correct'); b.classList.add('correct'); 
+                        fb.style.color = '#27ae60'; fb.innerText = '✅ آفرین!';
+                        btns.innerHTML = ''; onCorrect();
                     } else {
-                        playSound('wrong');
-                        btn.classList.add('wrong');
-                        fb.style.color = '#d63031';
-                        fb.innerText = '❌ این شکل درست نیست!';
-                        setTimeout(() => btn.classList.remove('wrong'), 600);
+                        playSound('wrong'); b.classList.add('wrong');
+                        fb.style.color = '#d63031'; fb.innerText = '❌ رنگش فرق داره!';
                     }
                 };
-                grid.appendChild(btn);
+                btns.appendChild(b);
             });
         }
     },
 
-    // ============ تفاوت نمادها ============
+    // ============ ۸. حافظه فوق‌العاده ============
+    memory: {
+        demo: function(container, onCorrect) {
+            container.innerHTML = `
+                <p style="font-weight:700; font-size:15px; text-align:center; color:#0984e3;">تصاویر و اعداد رو به خاطر بسپار!</p>
+                <div style="display:flex; justify-content:center; gap:10px; font-size:40px; margin:15px 0;">🍎 🚗</div>
+                <button class="tut-demo-item" style="width:100%; font-size:16px;" onclick="this.classList.add('correct'); playSound('correct'); arguments[0]();">فهمیدم! 🚀</button>
+            `;
+            container.querySelector('button').onclick = (e) => {
+                e.target.classList.add('correct'); playSound('correct'); onCorrect();
+            };
+        }
+    },
+
+    // ============ ۹. تفاوت نمادها ============
     symboldiff: {
-        rules: [
-            '🔍 دو جدول می‌بینی: جدول بالا (مرجع) و جدول پایین',
-            '🎯 در جدول پایین، نمادهایی که با بالا فرق دارن رو پیدا کن',
-            '⏱️ زمان محدوده!'
-        ],
         demo: function(container, onCorrect) {
-            const refSymbols = ['★', '●', '■', '◆'];
-            const targetSymbols = ['★', '●', '▲', '◆'];
-            const diffIdx = 2;
             container.innerHTML = `
-                <p style="font-weight:700; font-size:15px; margin-top:0;">کدام نماد در جدول پایین با بالا فرق داره؟</p>
-                <div style="margin-bottom:15px;">
-                    <div style="font-size:12px; color:#636e72; margin-bottom:5px; font-weight:600;">جدول بالا (مرجع)</div>
-                    <div class="tut-demo-grid" id="tut-ref-grid" style="opacity:0.7;"></div>
+                <p style="font-weight:700; font-size:15px; text-align:center; color:#0984e3;">کدوم شکل با بالا فرق داره؟</p>
+                <div style="display:flex; gap:10px; justify-content:center; margin-bottom:10px; opacity:0.5;">
+                    <div class="tut-demo-item">★</div><div class="tut-demo-item">●</div>
                 </div>
-                <div>
-                    <div style="font-size:12px; color:#636e72; margin-bottom:5px; font-weight:600;">جدول پایین (روی تفاوت کلیک کن)</div>
-                    <div class="tut-demo-grid" id="tut-tgt-grid"></div>
-                </div>
-                <div class="tut-feedback" id="tut-feedback"></div>
+                <div style="display:flex; gap:10px; justify-content:center;" id="demo-btns"></div>
+                <div id="demo-fb" style="text-align:center; margin-top:10px; font-weight:bold;"></div>
             `;
-            const refGrid = container.querySelector('#tut-ref-grid');
-            const tgtGrid = container.querySelector('#tut-tgt-grid');
-            const fb = container.querySelector('#tut-feedback');
-            let solved = false;
-
-            refSymbols.forEach(s => {
-                const btn = document.createElement('button');
-                btn.className = 'tut-demo-item';
-                btn.innerText = s;
-                btn.disabled = true;
-                refGrid.appendChild(btn);
-            });
-            targetSymbols.forEach((s, i) => {
-                const btn = document.createElement('button');
-                btn.className = 'tut-demo-item';
-                btn.innerText = s;
-                btn.onclick = () => {
-                    if (solved) return;
-                    if (i === diffIdx) {
-                        solved = true;
-                        playSound('correct');
-                        btn.classList.add('correct');
-                        tgtGrid.querySelectorAll('button').forEach(b => {
-                            b.disabled = true;
-                            if (b !== btn) b.style.opacity = '0.4';
-                        });
-                        fb.style.color = '#27ae60';
-                        fb.innerText = '✅ آفرین! این نماد تغییر کرده بود';
-                        onCorrect();
+            const btns = container.querySelector('#demo-btns');
+            const fb = container.querySelector('#demo-fb');
+            
+            [
+                { icon: '★', ok: false },
+                { icon: '▲', ok: true }
+            ].forEach(opt => {
+                const b = document.createElement('button');
+                b.className = 'tut-demo-item'; b.innerText = opt.icon;
+                b.onclick = () => {
+                    if (opt.ok) {
+                        playSound('correct'); b.classList.add('correct'); 
+                        fb.style.color = '#27ae60'; fb.innerText = '✅ آفرین! شکل دوم عوض شده!';
+                        btns.innerHTML = ''; onCorrect();
                     } else {
-                        playSound('wrong');
-                        btn.classList.add('wrong');
-                        fb.style.color = '#d63031';
-                        fb.innerText = '❌ این یکی تغییر نکرده!';
-                        setTimeout(() => btn.classList.remove('wrong'), 600);
+                        playSound('wrong'); b.classList.add('wrong');
+                        fb.style.color = '#d63031'; fb.innerText = '❌ این یکی تغییر نکرده!';
                     }
                 };
-                tgtGrid.appendChild(btn);
+                btns.appendChild(b);
             });
         }
     },
 
-    // ============ چی کجا بود؟ ============
+    // ============ ۱۰. چی کجا بود؟ ============
     scattermem: {
-        rules: [
-            '👀 چند ثانیه تصاویر و اعداد روی صفحه ظاهر می‌شن',
-            '🧠 باید جاهاشون و چیزهایی که دیدی رو به خاطر بسپاری',
-            '❓ بعدش چند سوال ازت می‌پرسم'
-        ],
         demo: function(container, onCorrect) {
             container.innerHTML = `
-                <p style="font-weight:700; font-size:15px; margin-top:0;">فرض کن اینا رو دیدی: 🍎 🐱</p>
-                <p style="font-size:14px; color:#636e72; margin:8px 0;">حالا کدوم یکی از اینا توی تصویر بود؟</p>
-                <div class="tut-demo-grid" id="tut-demo-grid" style="grid-template-columns:repeat(2,1fr);"></div>
-                <div class="tut-feedback" id="tut-feedback"></div>
+                <p style="font-weight:700; font-size:15px; text-align:center; color:#0984e3;">فرض کن اینا رو دیدی: 🍎 🐱</p>
+                <p style="font-size:14px; text-align:center; margin:5px 0;">کدوم توی تصویر بود؟</p>
+                <div style="display:flex; justify-content:center; gap:15px;" id="demo-btns"></div>
+                <div id="demo-fb" style="text-align:center; margin-top:10px; font-weight:bold;"></div>
             `;
-            const grid = container.querySelector('#tut-demo-grid');
-            const fb = container.querySelector('#tut-feedback');
-            let solved = false;
-
+            const btns = container.querySelector('#demo-btns');
+            const fb = container.querySelector('#demo-fb');
+            
             [
-                { value: '🍕', correct: false },
-                { value: '🍎', correct: true }
+                { icon: '🍕', ok: false },
+                { icon: '🍎', ok: true }
             ].forEach(opt => {
-                const btn = document.createElement('button');
-                btn.className = 'tut-demo-item';
-                btn.innerText = opt.value;
-                btn.style.aspectRatio = 'auto';
-                btn.style.minHeight = '70px';
-                btn.style.fontSize = '40px';
-                btn.onclick = () => {
-                    if (solved) return;
-                    if (opt.correct) {
-                        solved = true;
-                        playSound('correct');
-                        btn.classList.add('correct');
-                        grid.querySelectorAll('button').forEach(b => {
-                            b.disabled = true;
-                            if (b !== btn) b.style.opacity = '0.4';
-                        });
-                        fb.style.color = '#27ae60';
-                        fb.innerText = '✅ آفرین! سیب توی تصویر بود';
-                        onCorrect();
+                const b = document.createElement('button');
+                b.className = 'tut-demo-item'; b.innerText = opt.icon;
+                b.onclick = () => {
+                    if (opt.ok) {
+                        playSound('correct'); b.classList.add('correct'); 
+                        fb.style.color = '#27ae60'; fb.innerText = '✅ آفرین! سیب توی تصویر بود.';
+                        btns.innerHTML = ''; onCorrect();
                     } else {
-                        playSound('wrong');
-                        btn.classList.add('wrong');
-                        fb.style.color = '#d63031';
-                        fb.innerText = '❌ این توی تصویر نبود!';
-                        setTimeout(() => btn.classList.remove('wrong'), 600);
+                        playSound('wrong'); b.classList.add('wrong');
+                        fb.style.color = '#d63031'; fb.innerText = '❌ این توی تصویر نبود!';
                     }
                 };
-                grid.appendChild(btn);
+                btns.appendChild(b);
             });
         }
     },
-        riverranger: {
-        rules: [
-            '🌊 حیوانات از بالای رودخانه ظاهر می‌شوند و به پایین حرکت می‌کنند.',
-            '🧠 قانون ۱-عقب: اگر حیوان جدید با حیوان قبلی یکسان بود، روی آن کلیک کن!',
-            '🎯 مثال: اگر 🐢 دیدی و بعد از آن دوباره 🐢 آمد، روی دومی کلیک کن.'
-        ],
-        demo: createSimpleDemo(
-            'حیوان قبلی 🐢 بود. حالا کدام را باید کلیک کنی؟',
-            [
-                { value: '🐟' },
-                { value: '🐢' }, // این درسته
-                { value: '🦆' }
-            ],
-            (val) => val === '🐢'
-        )
-    },
-    speedmatch: {
-        rules: [],
-        demo: function(container, onCorrect) {
-            const lvl = getLevel('speedmatch');
-            const is2Back = lvl >= 3;
 
-            if (!is2Back) {
-                // آموزش 1-Back برای سطوح پایین
-                container.innerHTML = `
-                    <p style="font-weight:700; font-size:15px; margin-top:0;">در این مرحله، شکل جدید را با <strong>شکل قبلی</strong> مقایسه کن:</p>
-                    <div style="text-align:center; font-size:40px; margin:15px 0;">
-                        🔴 ➡️ 🔴
-                    </div>
-                    <p style="font-size:14px; color:#636e72; margin-bottom:15px;">اگر مثل هم بودند دکمه «بله»، اگر فرق داشتند دکمه «نه» را بزن.</p>
-                    <div class="tut-demo-grid" id="tut-demo-grid" style="grid-template-columns:repeat(2,1fr);"></div>
-                    <div class="tut-feedback" id="tut-feedback"></div>
-                `;
-                const grid = container.querySelector('#tut-demo-grid');
-                const fb = container.querySelector('#tut-feedback');
-                let solved = false;
-
-                [
-                    { name: '✅ بله', val: true },
-                    { name: '❌ نه', val: false }
-                ].forEach(opt => {
-                    const btn = document.createElement('button');
-                    btn.className = 'tut-demo-item';
-                    btn.innerText = opt.name;
-                    btn.style.fontSize = '18px';
-                    btn.onclick = () => {
-                        if (solved) return;
-                        if (opt.val === true) {
-                            solved = true;
-                            playSound('correct');
-                            btn.classList.add('correct');
-                            grid.querySelectorAll('button').forEach(b => { b.disabled = true; if(b!==btn) b.style.opacity='0.4'; });
-                            fb.style.color = '#27ae60';
-                            fb.innerText = '✅ آفرین! دقیقاً یکسان هستند.';
-                            onCorrect();
-                        } else {
-                            playSound('wrong');
-                            btn.classList.add('wrong');
-                            fb.style.color = '#d63031';
-                            fb.innerText = '❌ دقت کن! این دو تا با هم یکسان هستند.';
-                            setTimeout(() => btn.classList.remove('wrong'), 600);
-                        }
-                    };
-                    grid.appendChild(btn);
-                });
-            } else {
-                // آموزش 2-Back برای سطوح بالا
-                container.innerHTML = `
-                    <div class="intro-box" style="margin-bottom:10px; padding:15px;">
-                        <p style="font-weight:700; font-size:15px; margin-top:0; color:#d63031;">⚠️ هشدار: در این مرحله قانون سخت‌تر می‌شود!</p>
-                        <p style="font-size:14px; margin-bottom:10px;">شما باید شکل جدید را با <strong>دو مرحله قبل</strong> مقایسه کنید (به شکل قبلی کاری نداشته باشید).</p>
-                        
-                        <div style="display:flex; justify-content:space-around; align-items:center; background:#f1f2f6; padding:10px; border-radius:10px; margin-bottom:10px; direction:ltr;">
-                            <div style="text-align:center;"><div style="font-size:30px;">🔴</div><div style="font-size:10px;">مرحله ۱</div></div>
-                            <div style="font-size:20px; color:#b2bec3;">➡️</div>
-                            <div style="text-align:center;"><div style="font-size:30px;">🔵</div><div style="font-size:10px;">مرحله ۲</div></div>
-                            <div style="font-size:20px; color:#b2bec3;">➡️</div>
-                            <div style="text-align:center; background:#d4edda; padding:5px; border-radius:5px; border:2px solid #00b894;"><div style="font-size:30px;">🔴</div><div style="font-size:10px;">مرحله ۳</div></div>
-                        </div>
-                        <p style="font-size:13px; color:#0984e3; font-weight:700; text-align:center;">اینجا شکل ۳ (🔴) با شکل ۱ (🔴) یکسان است. پس دکمه بله را می‌زنیم!</p>
-                    </div>
-                    <button onclick="window._smTutComplete()" style="margin-top:10px;">فهمیدم، آماده‌ام! 🚀</button>
-                `;
-                window._smTutComplete = () => {
-                    playSound('click');
-                    onCorrect();
-                };
-            }
-        }
-    },
-        suitcase: {
-        rules: [
-            '🧳 در چمدان تعدادی وسیله وجود دارد.',
-            '📷 باید دوربین را در یک خانه خالی بگذاری.',
-            '🔽 چمدان از وسط (خط‌چین زرد) تا می‌شود و نیمه بالایی روی نیمه پایینی می‌افتد.',
-            '⚠️ اگر دوربین روی وسیله‌ای بیفتد، خطا می‌کنی!'
-        ],
+    // ============ ۱۱. رودخانه (River Ranger) ============
+    riverranger: {
         demo: function(container, onCorrect) {
             container.innerHTML = `
-                <p style="font-weight:700; font-size:15px; margin-top:0;">فرض کن می‌خواهیم نیمه بالای چمدان را روی نیمه پایین ببندیم.</p>
-                <div style="display:flex; flex-direction:column; align-items:center; margin:15px 0; background:#f1f2f6; padding:10px; border-radius:10px; width:fit-content; margin:15px auto;">
-                    <!-- نیمه بالا -->
-                    <div style="display:flex; gap:10px; margin-bottom:5px;">
-                        <div style="width:50px; height:50px; background:#e9f5ff; border:2px dashed #0984e3; border-radius:5px; display:flex; justify-content:center; align-items:center; font-size:24px;">📷</div>
-                        <div style="width:50px; height:50px; background:#fdf5e6; border:2px solid #5c442c; border-radius:5px; display:flex; justify-content:center; align-items:center; font-size:24px;">🧴</div>
+                <p style="font-weight:700; font-size:15px; text-align:center; color:#0984e3;">اگر حیوان جدید با قبلی یکسان بود، کلیک کن!</p>
+                <div style="display:flex; justify-content:center; gap:10px; font-size:40px; margin:15px 0;">
+                    <span>🐟</span> <span>➡️</span> <span id="demo-target" style="cursor:pointer; transition:0.2s; border:2px dashed #0984e3; border-radius:10px; padding:0 5px;">🐟</span>
+                </div>
+                <div id="demo-fb" style="text-align:center; margin-top:10px; font-weight:bold;">روی ماهی دوم کلیک کن!</div>
+            `;
+            const target = container.querySelector('#demo-target');
+            const fb = container.querySelector('#demo-fb');
+            target.onclick = () => {
+                playSound('correct'); target.style.background = '#d4edda'; target.style.borderColor = '#00b894';
+                fb.style.color = '#27ae60'; fb.innerText = '✅ آفرین! چون هر دو یکسان بودن!';
+                setTimeout(onCorrect, 1000);
+            };
+        }
+    },
+
+    // ============ ۱۲. تطابق سرعت (Speed Match) ============
+    speedmatch: {
+        demo: function(container, onCorrect) {
+            container.innerHTML = `
+                <p style="font-weight:700; font-size:15px; text-align:center; color:#0984e3;">آیا این دو شکل یکسانند؟</p>
+                <div style="display:flex; justify-content:center; gap:10px; margin:15px 0;">
+                    <div style="background:#fff; border:3px solid #dfe6e9; padding:10px; border-radius:10px;">
+                        <svg viewBox="0 0 100 100" style="width:50px; height:50px;"><circle cx="50" cy="50" r="40" fill="#e74c3c"/></svg>
                     </div>
-                    <div style="color:#f39c12; font-weight:bold; font-size:12px; margin-bottom:5px;">⬇️ خط تا شدن ⬇️</div>
-                    <!-- نیمه پایین -->
-                    <div style="display:flex; gap:10px;">
-                        <div style="width:50px; height:50px; background:#fdf5e6; border:2px solid #5c442c; border-radius:5px; display:flex; justify-content:center; align-items:center; font-size:24px;">👓</div>
-                        <div style="width:50px; height:50px; background:#fdf5e6; border:2px solid #5c442c; border-radius:5px; display:flex; justify-content:center; align-items:center; font-size:24px;">🥣</div>
+                    <div style="background:#fff; border:3px solid #dfe6e9; padding:10px; border-radius:10px;">
+                        <svg viewBox="0 0 100 100" style="width:50px; height:50px;"><circle cx="50" cy="50" r="40" fill="#e74c3c"/></svg>
                     </div>
                 </div>
-                <p style="font-size:14px; margin-bottom:10px; font-weight:700;">اگر نیمه بالا را تا کنیم، دوربین 📷 روی چه چیزی می‌افتد؟</p>
-                <div class="tut-demo-grid" id="tut-demo-grid" style="grid-template-columns:repeat(2,1fr);"></div>
-                <div class="tut-feedback" id="tut-feedback"></div>
+                <div style="display:flex; justify-content:center; gap:10px;" id="demo-btns"></div>
+                <div id="demo-fb" style="text-align:center; margin-top:10px; font-weight:bold;"></div>
             `;
-            const grid = container.querySelector('#tut-demo-grid');
-            const fb = container.querySelector('#tut-feedback');
-            let solved = false;
-
+            const btns = container.querySelector('#demo-btns');
+            const fb = container.querySelector('#demo-fb');
+            
             [
-                { name: '✅ روی عینک 👓', val: true }, // این درسته
-                { name: '❌ روی کاسه 🥣', val: false }
+                { n: '✅ بله', ok: true },
+                { n: '❌ نه', ok: false }
             ].forEach(opt => {
-                const btn = document.createElement('button');
-                btn.className = 'tut-demo-item';
-                btn.innerText = opt.name;
-                btn.style.fontSize = '16px';
-                btn.onclick = () => {
-                    if (solved) return;
-                    if (opt.val === true) {
-                        solved = true;
-                        playSound('correct');
-                        btn.classList.add('correct');
-                        grid.querySelectorAll('button').forEach(b => { b.disabled = true; if(b!==btn) b.style.opacity='0.4'; });
-                        fb.style.color = '#27ae60';
-                        fb.innerText = '✅ آفرین! دوربین دقیقاً روی عینک می‌افتد. پس این جای اشتباهی است!';
-                        onCorrect();
+                const b = document.createElement('button');
+                b.className = 'tut-demo-item'; b.innerText = opt.n;
+                b.onclick = () => {
+                    if (opt.ok) {
+                        playSound('correct'); b.classList.add('correct'); 
+                        fb.style.color = '#27ae60'; fb.innerText = '✅ آفرین! دقیقاً یکسان هستند.';
+                        btns.innerHTML = ''; onCorrect();
                     } else {
-                        playSound('wrong');
-                        btn.classList.add('wrong');
-                        fb.style.color = '#d63031';
-                        fb.innerText = '❌ دقت کن! ستون سمت چپ را نگاه کن.';
-                        setTimeout(() => btn.classList.remove('wrong'), 600);
+                        playSound('wrong'); b.classList.add('wrong');
+                        fb.style.color = '#d63031'; fb.innerText = '❌ دقت کن! این دو کاملاً یکسانند.';
                     }
                 };
-                grid.appendChild(btn);
+                btns.appendChild(b);
+            });
+        }
+    },
+
+    // ============ ۱۳. چمدان سفر (Suitcase) ============
+    suitcase: {
+        demo: function(container, onCorrect) {
+            container.innerHTML = `
+                <p style="font-weight:700; font-size:15px; text-align:center; color:#0984e3;">دوربین 📷 را کجا بگذاریم که بعد از تا شدن، روی وسیله‌ای نیفتد؟</p>
+                <div style="display:flex; flex-direction:column; align-items:center; background:#f1f2f6; padding:10px; border-radius:10px; width:fit-content; margin:15px auto;">
+                    <div style="display:flex; gap:10px; margin-bottom:5px;">
+                        <div style="width:40px; height:40px; background:#e9f5ff; border:2px dashed #0984e3; border-radius:5px; display:flex; justify-content:center; align-items:center; font-size:20px;">📷</div>
+                        <div style="width:40px; height:40px; background:#fdf5e6; border:2px solid #5c442c; border-radius:5px; display:flex; justify-content:center; align-items:center; font-size:20px;">🧴</div>
+                    </div>
+                    <div style="color:#f39c12; font-weight:bold; font-size:12px; margin-bottom:5px;">--- خط تا ---</div>
+                    <div style="display:flex; gap:10px;">
+                        <div style="width:40px; height:40px; background:#fdf5e6; border:2px solid #5c442c; border-radius:5px; display:flex; justify-content:center; align-items:center; font-size:20px;">👓</div>
+                        <div style="width:40px; height:40px; background:#fdf5e6; border:2px solid #5c442c; border-radius:5px; display:flex; justify-content:center; align-items:center; font-size:20px;">🥣</div>
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:center; gap:10px;" id="demo-btns"></div>
+                <div id="demo-fb" style="text-align:center; margin-top:10px; font-weight:bold;"></div>
+            `;
+            const btns = container.querySelector('#demo-btns');
+            const fb = container.querySelector('#demo-fb');
+            
+            [
+                { n: '👓 روی عینک', ok: true },
+                { n: '🥣 روی کاسه', ok: false }
+            ].forEach(opt => {
+                const b = document.createElement('button');
+                b.className = 'tut-demo-item'; b.innerText = opt.n; b.style.fontSize = '16px';
+                b.onclick = () => {
+                    if (opt.ok) {
+                        playSound('correct'); b.classList.add('correct'); 
+                        fb.style.color = '#27ae60'; fb.innerText = '✅ آفرین! این جای درستی نیست چون روی عینک می‌افتد.';
+                        btns.innerHTML = ''; onCorrect();
+                    } else {
+                        playSound('wrong'); b.classList.add('wrong');
+                        fb.style.color = '#d63031'; fb.innerText = '❌ دقت کن! اگر تا شود، دوربین روی عینک می‌افتد نه کاسه!';
+                    }
+                };
+                btns.appendChild(b);
             });
         }
     }
@@ -556,9 +374,6 @@ const TUTORIALS = {
 // =====================================================
 // نمایش صفحه آموزش
 // =====================================================
-
-let _tutorialOnComplete = null;
-
 function showTutorial(gameKey, onComplete) {
     const meta = GAME_META[gameKey];
     const domain = DOMAINS[meta.domain];
@@ -572,28 +387,28 @@ function showTutorial(gameKey, onComplete) {
     _tutorialOnComplete = onComplete;
     showScreen('screen-tutorial');
 
-    document.getElementById('tut-icon').innerText = meta.icon;
     document.getElementById('tut-title').innerText = meta.name;
 
     const badge = document.getElementById('tut-domain-badge');
     badge.innerText = `${domain.name}`;
     badge.style.background = domain.color;
 
-    const rulesEl = document.getElementById('tut-rules');
-    rulesEl.innerHTML = '';
-    tut.rules.forEach(r => {
-        const li = document.createElement('li');
-        li.innerText = r;
-        rulesEl.appendChild(li);
-    });
-
     const demoContainer = document.getElementById('tut-demo-container');
     const startBtn = document.getElementById('tut-start-btn');
-    demoContainer.style.display = 'none';
+    const skipBtn = document.getElementById('tut-skip-btn');
+    
+    demoContainer.style.display = 'block';
     demoContainer.innerHTML = '';
+    
     startBtn.disabled = true;
     startBtn.innerText = 'اول تمرین رو کامل کن! 🚀';
     
+    const enableStart = () => {
+        startBtn.disabled = false;
+        startBtn.innerText = '🚀 شروع بازی';
+    };
+
+    // دکمه شروع
     startBtn.onclick = () => {
         if (startBtn.disabled) return;
         playSound('click');
@@ -602,13 +417,16 @@ function showTutorial(gameKey, onComplete) {
         if (cb) cb();
     };
 
-    const enableStart = () => {
-        startBtn.disabled = false;
-        startBtn.innerText = '🚀 شروع بازی';
+    // دکمه رد کردن (Skip)
+    skipBtn.onclick = () => {
+        playSound('click');
+        const cb = _tutorialOnComplete;
+        _tutorialOnComplete = null;
+        if (cb) cb();
     };
 
+    // اجرای دموی تعاملی
     if (tut.demo) {
-        demoContainer.style.display = 'block';
         tut.demo(demoContainer, enableStart);
     } else {
         enableStart();
