@@ -48,16 +48,12 @@ function startShapehunt() {
 
     document.getElementById(prefix + '-feedback').innerText = '';
 
-    if (state.noTimerMode) {
-        showStaticTimerBar(prefix + '-timer-bar', '#00b894');
-    } else {
-        startTimerBar(prefix + '-timer-bar', cfg.timeSec * 1000);
-        shapehuntState.timerId = gameInterval(() => {
-            if (isPaused || !shapehuntState || !shapehuntState.active) return;
-            shapehuntState.remainingSec--;
-            if (shapehuntState.remainingSec <= 0) endShapehunt(false);
-        }, 1000);
-    }
+    startTimerBar(prefix + '-timer-bar', cfg.timeSec * 1000);
+    shapehuntState.timerId = gameInterval(() => {
+        if (isPaused || !shapehuntState || !shapehuntState.active) return;
+        shapehuntState.remainingSec--;
+        if (shapehuntState.remainingSec <= 0) endShapehunt(false);
+    }, 1000);
 
     showScreen(GAME_META[key].screen);
     updateGameScore();
@@ -100,7 +96,7 @@ function handleShapehuntClick(btn, isTarget) {
 
 function clearShapehuntTimer() {
     if (shapehuntState && shapehuntState.timerId) {
-        clearInterval(shapehuntState.timerId);
+        clearGameInterval(shapehuntState.timerId);
         gameTimers.delete(shapehuntState.timerId);
         shapehuntState.timerId = null;
     }
@@ -131,8 +127,7 @@ function endShapehunt(allFound) {
 GAME_STARTERS.shapehunt = startShapehunt;
 GAME_PAUSE_HOOKS.shapehunt = () => clearShapehuntTimer();
 GAME_RESUME_HOOKS.shapehunt = () => {
-    if (!shapehuntState || !shapehuntState.active || state.noTimerMode) return;
-    if (!shapehuntState.timerId) {
+if (!shapehuntState || !shapehuntState.active) return;    if (!shapehuntState.timerId) {
         shapehuntState.timerId = gameInterval(() => {
             if (isPaused || !shapehuntState || !shapehuntState.active) return;
             shapehuntState.remainingSec--;

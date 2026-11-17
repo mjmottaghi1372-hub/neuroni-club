@@ -61,8 +61,9 @@ function registerWrong() {
         gameInProgress = false;
         clearAllGameTimers();
         const meta = GAME_META[currentGame];
-        setTimeout(() => {
-            if (!gameActive) return;
+        const snapshotGame = currentGame;
+         gameTimeout(() => {
+            if (!gameActive || currentGame !== snapshotGame) return;
             endSingleGame(meta.name, '😢 خیلی اشتباه کردی! بازی تموم شد.', true);
         }, 1200);
         return true;
@@ -109,10 +110,9 @@ function addToHistory(gameKey, score, level, passed, heartsLeft, totalHearts) {
 }
 
 function getPreviousScoreForGame(gameKey) {
-    if (!state.gameHistory || state.gameHistory.length < 2) return null;
-    const history = state.gameHistory.slice(0, -1);
-    for (let i = history.length - 1; i >= 0; i--) {
-        if (history[i].gameKey === gameKey) return history[i].score;
+    if (!state.gameHistory || state.gameHistory.length < 1) return null;
+    for (let i = state.gameHistory.length - 1; i >= 0; i--) {
+        if (state.gameHistory[i].gameKey === gameKey) return state.gameHistory[i].score;
     }
     return null;
 }
@@ -134,7 +134,7 @@ function endSingleGame(gameName, message, forceFail) {
 
     const prevScore = getPreviousScoreForGame(key);
 
-    state.totalScore += currentGameScore;
+     state.totalScore += Math.round(currentGameScore);
     recordPlayTime();
 
     if (currentGameScore > getBest(key)) setBest(key, currentGameScore);
@@ -453,6 +453,15 @@ function handleNextGame() {
 // ============ خروج ============
 function requestExit() {
     if (!gameActive) { goToMenu(); return; }
+    
+    if (window.isInAssessment) {
+        showModal('لغو ارزیابی؟', 'اگر الان خارج شی، ارزیابی ناقص می‌مونه و باید از اول شروع کنی.', [
+            { text: 'ادامه ارزیابی', class: 'primary', action: closeModal },
+            { text: 'خروج و لغو', class: 'secondary', action: () => { closeModal(); goToMenu(); } }
+        ]);
+        return;
+    }
+
     if (gameInProgress) {
         showModal(
             'پایان بازی؟',
@@ -484,8 +493,9 @@ function finishGameEarly() {
 }
 
 function saveCurrentScoreAndExit() {
-    if (currentGameScore > 0) {
-        state.totalScore += currentGameScore;
+    if (gameActive && currentGameScore > 0) {
+        state.totalScore += Math.round(currentGameScore);
+        currentGameScore = 0;
         saveState();
     }
     recordPlayTime();

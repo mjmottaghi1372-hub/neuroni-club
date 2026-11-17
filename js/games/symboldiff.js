@@ -91,16 +91,12 @@ function startSymboldiff() {
 
     document.getElementById(prefix + '-feedback').innerText = '';
 
-    if (state.noTimerMode) {
-        showStaticTimerBar(prefix + '-timer-bar', '#00b894');
-    } else {
-        startTimerBar(prefix + '-timer-bar', cfg.timeSec * 1000);
-        symboldiffState.timerId = gameInterval(() => {
-            if (isPaused || !symboldiffState || !symboldiffState.active) return;
-            symboldiffState.remainingSec--;
-            if (symboldiffState.remainingSec <= 0) endSymboldiff();
-        }, 1000);
-    }
+    startTimerBar(prefix + '-timer-bar', cfg.timeSec * 1000);
+    symboldiffState.timerId = gameInterval(() => {
+        if (isPaused || !symboldiffState || !symboldiffState.active) return;
+        symboldiffState.remainingSec--;
+        if (symboldiffState.remainingSec <= 0) endSymboldiff();
+    }, 1000);
 
     showScreen(GAME_META[key].screen);
     updateGameScore();
@@ -142,7 +138,7 @@ function handleSymboldiffClick(div, idx) {
 
 function clearSymboldiffTimer() {
     if (symboldiffState && symboldiffState.timerId) {
-        clearInterval(symboldiffState.timerId);
+        clearGameInterval(symboldiffState.timerId);
         gameTimers.delete(symboldiffState.timerId);
         symboldiffState.timerId = null;
     }
@@ -166,7 +162,7 @@ function endSymboldiff() {
 GAME_STARTERS.symboldiff = startSymboldiff;
 GAME_PAUSE_HOOKS.symboldiff = () => clearSymboldiffTimer();
 GAME_RESUME_HOOKS.symboldiff = () => {
-    if (!symboldiffState || !symboldiffState.active || state.noTimerMode) return;
+    if (!symboldiffState || !symboldiffState.active) return;
     if (!symboldiffState.timerId) {
         symboldiffState.timerId = gameInterval(() => {
             if (isPaused || !symboldiffState || !symboldiffState.active) return;

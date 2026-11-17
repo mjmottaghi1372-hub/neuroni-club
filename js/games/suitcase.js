@@ -200,7 +200,7 @@ function handleSuitcaseClick(r, c, cell) {
     const halfAEl = document.getElementById(prefix + '-grid-a');
 
     suitcaseState.phase = 'checking';
-    if (suitcaseState.timerId) clearInterval(suitcaseState.timerId);
+    if (suitcaseState.timerId) clearGameInterval(suitcaseState.timerId);
     
     cell.innerText = '📷';
     document.querySelectorAll(`#${prefix}-grid-a .suitcase-cell`).forEach(el => el.onclick = null);
@@ -290,7 +290,7 @@ function handleSuitcaseTimeout() {
 
 GAME_STARTERS.suitcase = startSuitcase;
 GAME_PAUSE_HOOKS.suitcase = () => {
-    if (suitcaseState && suitcaseState.timerId) clearInterval(suitcaseState.timerId);
+    if (suitcaseState && suitcaseState.timerId) clearGameInterval(suitcaseState.timerId);
 };
 GAME_RESUME_HOOKS.suitcase = () => {
     if (suitcaseState && suitcaseState.active && suitcaseState.phase === 'answering') {

@@ -127,7 +127,7 @@ function nextSpeedMatchRound() {
         
         startTimerBar(prefix + '-timer-bar', cfg.timePerItem);
         
-        clearTimeout(speedMatchState.timerId);
+        clearGameTimeout(speedMatchState.timerId);
         speedMatchState.timerId = gameTimeout(() => {
             if (!speedMatchState || !speedMatchState.active || speedMatchState.phase !== 'answering' || isPaused) return;
             handleSMMiss();
@@ -138,7 +138,7 @@ function nextSpeedMatchRound() {
 function answerSpeedMatch(userSaidMatch) {
     if (!speedMatchState || !speedMatchState.active || isPaused || speedMatchState.phase !== 'answering') return;
     
-    clearTimeout(speedMatchState.timerId);
+    clearGameTimeout(speedMatchState.timerId);
     speedMatchState.phase = 'advance';
 
     const { sequence, currentIndex, cfg, prefix } = speedMatchState;
@@ -214,7 +214,7 @@ function getSMSVG(shape, color) {
 
 GAME_STARTERS.speedmatch = startSpeedMatch;
 GAME_PAUSE_HOOKS.speedmatch = () => {
-    clearTimeout(speedMatchState.timerId);
+    clearGameTimeout(speedMatchState.timerId);
 };
 GAME_RESUME_HOOKS.speedmatch = () => {
     if (!speedMatchState || !speedMatchState.active || speedMatchState.phase !== 'answering') return;

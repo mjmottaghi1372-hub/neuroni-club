@@ -55,15 +55,17 @@ async function dbDelete(key) {
     });
 }
 
+// مهم: این تابع اینجا defin شده تا state.js به storage.js وابسته نباشه
 function createDefaultState() {
     const games = {};
     for (const key of GAME_KEYS) {
-        games[key] = { 
-            level: 1, 
-            best: 0, 
+        games[key] = {
+            level: 1,
+            best: 0,
             bestTime: null,
             badges: { 1: false, 2: false, 3: false, 4: false },
-            tutorialSeen: false 
+            tutorialSeen: false,
+            introSeen: false
         };
     }
     return {
@@ -76,13 +78,57 @@ function createDefaultState() {
         dailyPlayDate: null,
         soundEnabled: true,
         games,
-        gameHistory: []
+        gameHistory: [],
+        dailyWorkout: { date: null, games: [], completed: [] },
+        cognitiveProfile: { working_memory: null, attention: null, processing_speed: null, flexibility: null, problem_solving: null },
+        assessmentCompleted: false,
+        currentAssessmentIndex: 0,
+        currentAssessmentQueue: [],
+        assessmentDomains: [],
+        _savedLevelsForAssessment: null
     };
 }
 
+// مهاجرت از localStorage (نسخه‌های قدیمی)
 function migrateFromLocalStorage() {
-    // ... (کدهای مهاجرت بدون تغییر است، همان قبلی را بگذارید)
-    // برای اطمینان می‌توانید همان فایل قبلی را نگه دارید، فقط مطمئن شوید createDefaultState بالا باشد
+    try {
+        const totalScore = parseInt(localStorage.getItem('brainTotalScore') || '0', 10);
+        const levelsRaw = localStorage.getItem('brainLevels_v2') || localStorage.getItem('brainLevels');
+        const bestRaw = localStorage.getItem('brainBestScores_v2') || localStorage.getItem('brainBestScores');
+        const badgesRaw = localStorage.getItem('brainBadges');
+        const streak = parseInt(localStorage.getItem('brainStreak') || '0', 10);
+        const lastPlay = localStorage.getItem('brainLastPlayDate');
+        const dailyPlay = parseInt(localStorage.getItem('brainDailyPlay') || '0', 10);
+        const dailyPlayDate = localStorage.getItem('brainDailyPlayDate');
+
+        // اگر هیچ داده‌ای نبود، یعنی کاربر جدید
+        if (!levelsRaw && !bestRaw && !badgesRaw && totalScore === 0 && streak === 0) {
+            return null;
+        }
+
+        const levels = levelsRaw ? JSON.parse(levelsRaw) : {};
+        const best = bestRaw ? JSON.parse(bestRaw) : {};
+        const badges = badgesRaw ? JSON.parse(badgesRaw) : {};
+
+        const state = createDefaultState();
+        state.totalScore = totalScore || 0;
+        state.streak = streak || 0;
+        state.lastPlayDate = lastPlay || null;
+        state.dailyPlaySeconds = dailyPlay || 0;
+        state.dailyPlayDate = dailyPlayDate || null;
+
+        for (const key of GAME_KEYS) {
+            if (levels[key] !== undefined) state.games[key].level = levels[key];
+            if (best[key] !== undefined) state.games[key].best = best[key];
+            if (badges[key] && typeof badges[key] === 'object') {
+                state.games[key].badges = { ...state.games[key].badges, ...badges[key] };
+            }
+        }
+        return state;
+    } catch(e) {
+        console.warn('Migration from localStorage failed:', e);
+        return null;
+    }
 }
 
 async function loadStateFromDB() {

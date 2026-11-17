@@ -10,6 +10,9 @@ const STROOP_COLORS = [
     { name: 'بنفش', hex: '#9b59b6' }
 ];
 
+// 🔧 تأخیر بین ترایال‌ها (میلی‌ثانیه) — قبلاً 1200 بود
+const STROOP_ADVANCE_MS = 500;
+
 let stroopState = null;
 
 function startStroop() {
@@ -79,11 +82,8 @@ function nextStroopRound() {
     const gameBox = document.getElementById(GAME_META[key].screen).querySelector('.game-box');
 
     if (isJunior) {
-        // مکانیزم ضد تکرار (جلوگیری از ۳ بار تکرار پشت سر هم)
         let isSun = Math.random() > 0.5;
-        if (stroopState.lastIsSun === isSun && Math.random() < 0.8) {
-            isSun = !isSun; // با احتمال ۸۰٪ شکل را عوض کن
-        }
+        if (stroopState.lastIsSun === isSun && Math.random() < 0.8) isSun = !isSun;
         stroopState.lastIsSun = isSun;
 
         const useAltIcons = lvl >= 4;
@@ -101,7 +101,7 @@ function nextStroopRound() {
         const wordObj = colors[Math.floor(Math.random() * colors.length)];
         let colorObj;
         if (lvl >= 4) {
-            do { colorObj = colors[Math.floor(Math.random() * colors.length)]; } 
+            do { colorObj = colors[Math.floor(Math.random() * colors.length)]; }
             while (colorObj.name === wordObj.name && colors.length > 1);
         } else {
             colorObj = colors[Math.floor(Math.random() * colors.length)];
@@ -113,14 +113,10 @@ function nextStroopRound() {
     }
     feedback.innerText = '';
 
-    if (state.noTimerMode) {
-        showStaticTimerBar(prefix + '-timer-bar', '#00b894');
-    } else {
-        startTimerBar(prefix + '-timer-bar', cfg.timePerRound);
-        stroopState.endTime = Date.now() + cfg.timePerRound;
-        stroopState.remainingMs = cfg.timePerRound;
-        stroopStartTick();
-    }
+    startTimerBar(prefix + '-timer-bar', cfg.timePerRound);
+    stroopState.endTime = Date.now() + cfg.timePerRound;
+    stroopState.remainingMs = cfg.timePerRound;
+    stroopStartTick();
 }
 
 function stroopStartTick() {
@@ -148,7 +144,7 @@ function stroopTick() {
         return;
     }
 
-    if (stroopState.locked || state.noTimerMode) return;
+    if (stroopState.locked) return;
     if (Date.now() >= stroopState.endTime) {
         handleStroopTimeout();
         return;
@@ -157,7 +153,7 @@ function stroopTick() {
 }
 
 function handleStroopTimeout() {
-    if (!stroopState || isPaused || stroopState.locked || state.noTimerMode) return;
+    if (!stroopState || isPaused || stroopState.locked) return;
     stroopState.locked = true;
     playSound('wrong');
     const fb = document.getElementById(stroopState.prefix + '-feedback');
@@ -170,7 +166,7 @@ function handleStroopTimeout() {
     }
 
     stroopState.phase = 'advance';
-    stroopState.advanceEndTime = Date.now() + 1200;
+    stroopState.advanceEndTime = Date.now() + STROOP_ADVANCE_MS;
     stroopStartTick();
 }
 
@@ -184,13 +180,11 @@ function checkStroop(selected) {
 
     if (isCorrect) {
         playSound('correct');
-        if (stroopState.isJunior) speak('آفرین');
         currentGameScore += cfg.points;
         fb.style.color = '#27ae60';
         fb.innerText = '✅ آفرین!';
     } else {
         playSound('wrong');
-        if (stroopState.isJunior) speak('اشتباه بود');
         fb.style.color = '#d63031';
         fb.innerText = '❌ دقت کن!';
         if (registerWrong()) {
@@ -201,7 +195,7 @@ function checkStroop(selected) {
     updateGameScore();
 
     stroopState.phase = 'advance';
-    stroopState.advanceEndTime = Date.now() + 1200;
+    stroopState.advanceEndTime = Date.now() + STROOP_ADVANCE_MS;
     stroopStartTick();
 }
 
@@ -210,8 +204,8 @@ GAME_STARTERS.stroop_senior = startStroop;
 
 function stroopPause() {
     if (!stroopState) return;
-    if (stroopState.tickId) { clearTimeout(stroopState.tickId); stroopState.tickId = null; }
-    if (stroopState.phase === 'answering' && !stroopState.locked && !state.noTimerMode) {
+    if (stroopState.tickId) { clearGameTimeout(stroopState.tickId); stroopState.tickId = null; }
+    if (stroopState.phase === 'answering' && !stroopState.locked) {
         stroopState.remainingMs = Math.max(0, stroopState.endTime - Date.now());
     } else if (stroopState.phase === 'advance') {
         stroopState.advanceRemainingMs = Math.max(0, stroopState.advanceEndTime - Date.now());
@@ -220,7 +214,7 @@ function stroopPause() {
 
 function stroopResume() {
     if (!stroopState || !gameInProgress || stroopState.tickId) return;
-    if (stroopState.phase === 'answering' && !stroopState.locked && !state.noTimerMode) {
+    if (stroopState.phase === 'answering' && !stroopState.locked) {
         stroopState.endTime = Date.now() + (stroopState.remainingMs || 0);
     } else if (stroopState.phase === 'advance') {
         stroopState.advanceEndTime = Date.now() + (stroopState.advanceRemainingMs || 0);

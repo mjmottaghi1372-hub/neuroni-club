@@ -215,5 +215,14 @@ function endRiverRanger() {
 }
 
 GAME_STARTERS.riverranger = startRiverRanger;
-GAME_PAUSE_HOOKS.riverranger = () => {};
-GAME_RESUME_HOOKS.riverranger = () => {};
+GAME_PAUSE_HOOKS.riverranger = () => {
+    // متوقف کردن انیمیشن شنا کردن حیوانات
+    document.querySelectorAll('.rr-animal').forEach(el => {
+        el.style.animationPlayState = 'paused';
+    });
+};
+GAME_RESUME_HOOKS.riverranger = () => {
+    document.querySelectorAll('.rr-animal').forEach(el => {
+        el.style.animationPlayState = 'running';
+    });
+};

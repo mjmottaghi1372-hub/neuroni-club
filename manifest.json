@@ -1,18 +1,28 @@
 {
+  "id": "/neuroni-club/",
   "name": "باشگاه نورونی‌ها",
   "short_name": "نورونی‌ها",
   "description": "باشگاه تمرین‌های شناختی برای تقویت حافظه، توجه و سرعت پردازش",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
+  "orientation": "any",
+  "lang": "fa",
+  "dir": "rtl",
   "background_color": "#ffffff",
   "theme_color": "#0984e3",
-  "orientation": "portrait",
-    "icons": [
+  "icons": [
     {
       "src": "icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

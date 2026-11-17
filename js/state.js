@@ -2,28 +2,35 @@
 // STATE - مدیریت وضعیت اپلیکیشن
 // =====================================================
 
-let state = createDefaultState();
+let state = null;   // در initState مقداردهی می‌شود
 let pendingStreakMessage = null;
 let gameStartTime = 0;
 let _saveTimeout = null;
 
 async function initState() {
     state = await loadStateFromDB();
-    
+
     if (!state.gameHistory) state.gameHistory = [];
     if (!state.dailyWorkout) state.dailyWorkout = { date: null, games: [], completed: [] };
-    if (!state.cognitiveProfile) state.cognitiveProfile = { working_memory: null, attention: null, processing_speed: null, flexibility: null, problem_solving: null };
+    if (!state.cognitiveProfile) state.cognitiveProfile = {
+        working_memory: null, attention: null, processing_speed: null, flexibility: null, problem_solving: null
+    };
     if (state.assessmentCompleted === undefined) state.assessmentCompleted = false;
     if (state.readFreeMode === undefined) state.readFreeMode = false;
-    
+    if (state.currentAssessmentIndex === undefined) state.currentAssessmentIndex = 0;
+    if (state.currentAssessmentQueue === undefined) state.currentAssessmentQueue = [];
+    if (state.assessmentDomains === undefined) state.assessmentDomains = [];
+    if (state._savedLevelsForAssessment === undefined) state._savedLevelsForAssessment = null;
+
     for (const key of GAME_KEYS) {
         if (!state.games[key]) {
-            state.games[key] = { level: 1, best: 0, bestTime: null, badges: { 1: false, 2: false, 3: false, 4: false }, tutorialSeen: false };
+            state.games[key] = { level: 1, best: 0, bestTime: null, badges: { 1: false, 2: false, 3: false, 4: false }, tutorialSeen: false, introSeen: false };
         }
         if (!state.games[key].badges) state.games[key].badges = { 1: false, 2: false, 3: false, 4: false };
         if (state.games[key].badges[4] === undefined) state.games[key].badges[4] = false;
         if (state.games[key].bestTime === undefined) state.games[key].bestTime = null;
         if (state.games[key].tutorialSeen === undefined) state.games[key].tutorialSeen = false;
+        if (state.games[key].introSeen === undefined) state.games[key].introSeen = false;
     }
 }
 
@@ -90,12 +97,4 @@ function recordPlayTime() {
         gameStartTime = 0;
         saveState();
     }
-}
-
-function toggleReadFree() {
-    state.readFreeMode = !state.readFreeMode;
-    saveState();
-    updateMenuDisplay();
-    playSound('click');
-    showMascotMessage(state.readFreeMode ? 'حالت بدون خواندن فعال شد 👶🏻' : 'حالت عادی فعال شد 📖', 2500);
 }

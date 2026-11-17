@@ -4,15 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>باشگاه نورونی‌ها 🧠</title>
-        <!-- تنظیمات PWA -->
+    
+    <!-- تنظیمات PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0984e3">
     <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjEwMCIgZmlsbD0iIzA5ODRlMyIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjI1MCIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+8J+ngjwvdGV4dD48L3N2Zz4=">
-   <link rel="icon" type="image/png" href="icon-512.png">
+    <link rel="icon" type="image/png" href="icon-512.png">
+    
+    <!-- فونت و آیکون‌ها -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700;900&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="lib/lucide.min.js"></script>
+    
+    <!-- استایل -->
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -54,7 +59,7 @@
         </div>
 
         <!-- کارت ارزیابی اولیه -->
-                <div id="assessment-card" class="assessment-card" style="display:none;">
+        <div id="assessment-card" class="assessment-card" style="display:none;">
             <div class="as-content">
                 <div class="as-icon">🧪</div>
                 <div class="as-text">
@@ -77,54 +82,63 @@
         </div>
 
         <!-- نوار ابزار -->
-                <div class="menu-toolbar">
-            <button id="streak-btn" class="tool-btn" onclick="showStreakInfo()" title="روزهای پشت سرهم">
+        <div class="menu-toolbar">
+            <button id="streak-btn" class="tool-btn" onclick="showStreakInfo()">
                 <i data-lucide="flame"></i>
-                <span id="streak-value">۰</span>
+                <span class="tool-text">استریک</span>
+                <span id="streak-value" class="tool-badge">۰</span>
             </button>
-            <button id="readfree-btn" class="tool-btn" onclick="toggleReadFree()" title="حالت بدون خواندن (مناسب خردسالان)">
+            
+            <button id="readfree-btn" class="tool-btn" onclick="handleReadFreeClick()">
                 <i data-lucide="baby"></i>
+                <span class="tool-text">حالت کودک</span>
             </button>
-            <button class="tool-btn" onclick="showStats()" title="آمار و پیشرفت">
+            
+            <button class="tool-btn" onclick="showStats()">
                 <i data-lucide="bar-chart-3"></i>
+                <span class="tool-text">آمار</span>
             </button>
-            <button class="tool-btn" onclick="showAlbum()" title="آلبوم جوایز">
+            
+            <button class="tool-btn" onclick="showAlbum()">
                 <i data-lucide="trophy"></i>
+                <span class="tool-text">جوایز</span>
             </button>
-            <button class="tool-btn" onclick="requestParentReport()" title="گزارش والدی">
+            
+            <button class="tool-btn" onclick="requestParentReport()">
                 <i data-lucide="users"></i>
+                <span class="tool-text">والدین</span>
             </button>
-            <button class="tool-btn" onclick="requestReset()" title="پاک کردن پیشرفت">
+            
+            <button class="tool-btn" onclick="requestReset()">
                 <i data-lucide="trash-2"></i>
+                <span class="tool-text">ریست</span>
             </button>
         </div>
-
+        
         <div id="menu-games-grid" class="lumosity-grid"></div>
-    </div>
+    </div> <!-- 👈 این تگ بسته‌شدن screen-menu بود که جا افتاده بود -->
 
-        <!-- صفحه آموزش تعاملی -->
+    <!-- صفحه آموزش -->
     <div id="screen-tutorial" class="screen">
         <div class="stats">
             <button class="back-btn" onclick="goToMenu()">⬅️</button>
             <span id="tut-domain-badge" class="level-badge">🎯</span>
-            <span id="tut-title-header">آموزش بازی</span>
+            <span>آموزش بازی</span>
         </div>
         <div class="game-box">
-            <div style="text-align:center; margin-bottom:10px;">
+            <div style="text-align:center; margin-bottom:15px;">
+                <div id="tut-icon" style="font-size:60px; line-height:1; margin-bottom:8px;">🎮</div>
                 <h2 id="tut-title" style="color:#0984e3; margin:0; font-size:22px;">بازی</h2>
             </div>
-            
-            <!-- استیج انیمیشن (جایگزین متن) -->
-            <div id="tut-animation-stage" class="tut-stage"></div>
-            
-            <div id="tut-demo-container" class="practice-box" style="display:none; margin-top: 15px;"></div>
-            
-            <div style="display:flex; gap:10px; margin-top:20px;">
-                <button id="tut-skip-btn" class="back-btn" style="flex:1; background:#dfe6e9; border:none;" onclick="skipTutorial()">رد کردن آموزش ⏭️</button>
-                <button id="tut-start-btn" style="flex:2; margin:0;" disabled>اول تمرین رو کامل کن! 🚀</button>
+            <div class="intro-box">
+                <h3 style="margin-top:0; color:#0984e3; font-size:17px;">قانون بازی چیه؟ 🤔</h3>
+                <ul class="intro-list" id="tut-rules"></ul>
             </div>
+            <div id="tut-demo-container" class="practice-box" style="display:none;"></div>
+            <button id="tut-start-btn" disabled>اول تمرین رو کامل کن! 🚀</button>
         </div>
     </div>
+
     <!-- بازی ۱۲: Speed Match -->
     <div id="screen-speedmatch" class="screen">
         <div class="stats">
@@ -152,6 +166,7 @@
             <div id="sm-feedback" class="feedback-flash" style="margin-top:15px; font-size:18px;"></div>
         </div>
     </div>
+
     <!-- نتیجه ارزیابی -->
     <div id="screen-assessment-result" class="screen">
         <div class="stats">
@@ -321,7 +336,7 @@
             <span id="wj-wrongs" class="wrongs-display"></span>
             <span id="wj-score">امتیاز: ۰</span>
         </div>
-                <div class="game-box">
+        <div class="game-box">
             <div class="wordhunt-stopwatch" id="wj-stopwatch" style="display:none;">
                 <span>⏱️</span>
                 <span id="wj-stopwatch-time">۰.۰</span>
@@ -344,7 +359,7 @@
             <span id="ws-wrongs" class="wrongs-display"></span>
             <span id="ws-score">امتیاز: ۰</span>
         </div>
-                <div class="game-box">
+        <div class="game-box">
             <div class="wordhunt-stopwatch" id="ws-stopwatch" style="display:none;">
                 <span>⏱️</span>
                 <span id="ws-stopwatch-time">۰.۰</span>
@@ -474,6 +489,7 @@
             </div>
         </div>
     </div>
+
     <!-- بازی ۱۱: River Ranger (محیط رودخانه) -->
     <div id="screen-riverranger" class="screen">
         <div class="stats">
@@ -493,7 +509,8 @@
             <div id="rr-feedback" class="feedback-flash" style="margin: 10px;"></div>
         </div>
     </div>
-        <!-- بازی ۱۳: چمدان سفر (Suitcase) -->
+
+    <!-- بازی ۱۳: چمدان سفر (Suitcase) -->
     <div id="screen-suitcase" class="screen">
         <div class="stats">
             <div style="display:flex;gap:8px;">
@@ -517,10 +534,11 @@
             <div id="scs-feedback" class="feedback-flash" style="margin-top:15px; font-size:18px; min-height:30px;"></div>
         </div>
     </div>
+
     <!-- نتیجه بازی -->
     <div id="screen-result" class="screen">
         <div class="result-card">
-                        <div class="result-header">
+            <div class="result-header">
                 <div class="result-emoji" id="sr-emoji">🌟</div>
                 <h2 class="result-title" id="sr-title">بازی تموم شد!</h2>
                 <div id="sr-hearts" style="font-size:20px; letter-spacing:2px; margin-top:5px;"></div>

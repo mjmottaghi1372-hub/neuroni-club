@@ -193,23 +193,53 @@ function clearTimerBars() {
 }
 
 // ============ Game Timers Registry ============
-const gameTimers = new Set();
+// ============ Game Timers Registry (Pause-Aware) ============
+const activeGameTimeouts = new Map();
+const activeGameIntervals = new Map();
 
-function gameInterval(fn, ms) {
-    const id = setInterval(fn, ms);
-    gameTimers.add(id);
+function gameTimeout(fn, ms) {
+    const id = 'to_' + Math.random().toString(36).substr(2, 9);
+    const startTime = Date.now();
+    const nativeId = setTimeout(() => {
+        activeGameTimeouts.delete(id);
+        fn();
+    }, ms);
+    activeGameTimeouts.set(id, { fn, ms, startTime, nativeId, remaining: ms });
     return id;
 }
 
-function gameTimeout(fn, ms) {
-    const id = setTimeout(fn, ms);
-    gameTimers.add(id);
+function gameInterval(fn, ms) {
+    const id = 'in_' + Math.random().toString(36).substr(2, 9);
+    const nativeId = setInterval(() => {
+        if (!isPaused) fn(); // Intervalها خودشون چک می‌کنن
+    }, ms);
+    activeGameIntervals.set(id, { fn, ms, nativeId });
     return id;
+}
+
+function clearGameTimeout(id) {
+    const t = activeGameTimeouts.get(id);
+    if (t) {
+        clearTimeout(t.nativeId);
+        activeGameTimeouts.delete(id);
+    }
+    clearTimeout(id); // پشتیبانی از Native IDs
+}
+
+function clearGameInterval(id) {
+    const t = activeGameIntervals.get(id);
+    if (t) {
+        clearInterval(t.nativeId);
+        activeGameIntervals.delete(id);
+    }
+    clearInterval(id); // پشتیبانی از Native IDs
 }
 
 function clearAllGameTimers() {
-    gameTimers.forEach(id => { try { clearInterval(id); clearTimeout(id); } catch(e) {} });
-    gameTimers.clear();
+    activeGameTimeouts.forEach(t => clearTimeout(t.nativeId));
+    activeGameIntervals.forEach(t => clearInterval(t.nativeId));
+    activeGameTimeouts.clear();
+    activeGameIntervals.clear();
     clearTimerBars();
 }
 

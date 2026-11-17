@@ -7,7 +7,7 @@ const GAME_KEYS = [
     'numhunt_junior', 'numhunt_senior',
     'wordhunt_junior', 'wordhunt_senior',
     'shapehunt', 'memory', 'symboldiff',
-    'scattermem', 'riverranger',  'speedmatch', 'suitcase'
+    'scattermem', 'riverranger', 'speedmatch', 'suitcase'
 ];
 
 const DOMAINS = {
@@ -23,8 +23,9 @@ const GAME_META = {
     stroop_senior:   { name: 'رنگ یا کلمه؟',        icon: 'palette',   screen: 'screen-stroop-senior',   prefix: 'ss', domain: 'attention',        desc: 'تمرکز روی محرک هدف و نادیده گرفتن حواس‌پرتی', needsText: true },
     numhunt_junior:  { name: 'شکار حیوانات',        icon: 'paw-print', screen: 'screen-numhunt-junior',  prefix: 'nj', domain: 'working_memory',   desc: 'به خاطر سپردن موقعیت مکانی تصاویر', needsText: false },
     numhunt_senior:  { name: 'شکارچی اعداد',        icon: 'hash',      screen: 'screen-numhunt-senior',  prefix: 'ns', domain: 'working_memory',   desc: 'به خاطر سپردن موقعیت مکانی اعداد', needsText: true },
-    wordhunt_junior: { name: 'شکار میوه‌ها', icon: 'apple', screen: 'screen-wordhunt-junior', prefix: 'wj', domain: 'processing_speed', desc: 'پردازش تصاویر (رکورد بر اساس زمان)', needsText: false },
-    wordhunt_senior: { name: 'شکارچی کلمات', icon: 'file-text', screen: 'screen-wordhunt-senior', prefix: 'ws', domain: 'processing_speed', desc: 'اسکن کلمات (رکورد بر اساس زمان)', needsText: true },    shapehunt:       { name: 'شکل‌های مخفی',        icon: 'search',    screen: 'screen-shapehunt',       prefix: 'sh', domain: 'attention',        desc: 'جستجوی دیداری برای یافتن ویژگی‌های خاص', needsText: false },
+    wordhunt_junior: { name: 'شکار میوه‌ها',         icon: 'apple',     screen: 'screen-wordhunt-junior', prefix: 'wj', domain: 'processing_speed', desc: 'پردازش تصاویر (رکورد بر اساس زمان)', needsText: false, timeBased: true },
+    wordhunt_senior: { name: 'شکارچی کلمات',        icon: 'file-text', screen: 'screen-wordhunt-senior', prefix: 'ws', domain: 'processing_speed', desc: 'اسکن کلمات (رکورد بر اساس زمان)', needsText: true, timeBased: true },
+    shapehunt:       { name: 'شکل‌های مخفی',        icon: 'search',    screen: 'screen-shapehunt',       prefix: 'sh', domain: 'attention',        desc: 'جستجوی دیداری برای یافتن ویژگی‌های خاص', needsText: false },
     memory:          { name: 'حافظه فوق‌العاده',    icon: 'brain',     screen: 'screen-memory',          prefix: 'me', domain: 'working_memory',   desc: 'نگهداری همزمان اطلاعات دیداری و شنیداری', needsText: true },
     symboldiff:      { name: 'تفاوت نمادها',        icon: 'eye',       screen: 'screen-symboldiff',      prefix: 'sd', domain: 'attention',        desc: 'مقایسه دقیق و اسکن دیداری جدول‌ها', needsText: false },
     scattermem:      { name: 'چی کجا بود؟',         icon: 'map',       screen: 'screen-scattermem',      prefix: 'sc', domain: 'working_memory',   desc: 'یادآوری مکان و ویژگی‌های اشیاء پراکنده', needsText: true },
@@ -53,16 +54,16 @@ const GAME_CONFIGS = {
         4: { items: 24, targetCount: 6, timeSec: 15, pointsPerHit: 5, threshold: 25, maxWrong: 3 }
     },
     numhunt_senior: {
-        1: { target: 4, timeSec: 20, pointsPerHit: 5, penalty: 2, totalItems: 16, targetCount: 4, threshold: 15, maxWrong: 5 },
-        2: { target: 5, timeSec: 18, pointsPerHit: 5, penalty: 2, totalItems: 20, targetCount: 5, threshold: 20, maxWrong: 4 },
-        3: { target: 7, timeSec: 16, pointsPerHit: 5, penalty: 3, totalItems: 24, targetCount: 6, threshold: 25, maxWrong: 3 },
+        1: { target: 4,  timeSec: 20, pointsPerHit: 5, penalty: 2, totalItems: 16, targetCount: 4, threshold: 15, maxWrong: 5 },
+        2: { target: 5,  timeSec: 18, pointsPerHit: 5, penalty: 2, totalItems: 20, targetCount: 5, threshold: 20, maxWrong: 4 },
+        3: { target: 7,  timeSec: 16, pointsPerHit: 5, penalty: 3, totalItems: 24, targetCount: 6, threshold: 25, maxWrong: 3 },
         4: { target: 17, timeSec: 18, pointsPerHit: 5, penalty: 3, totalItems: 32, targetCount: 8, threshold: 30, maxWrong: 2 }
     },
-        wordhunt_junior: {
-        1: { targetTimeSec: 25, maxTimeSec: 60, points: 50,  gridSize: 12, threshold: 50,  type: 'fruit',             maxWrong: 5 },
-        2: { targetTimeSec: 22, maxTimeSec: 55, points: 60,  gridSize: 16, threshold: 60,  type: 'animal',            maxWrong: 5 },
-        3: { targetTimeSec: 20, maxTimeSec: 50, points: 75,  gridSize: 20, threshold: 75,  type: 'redfruit',          maxWrong: 4 },
-        4: { targetTimeSec: 18, maxTimeSec: 45, points: 90,  gridSize: 24, threshold: 90,  type: 'redfruit_similar',  maxWrong: 3 }
+    wordhunt_junior: {
+        1: { targetTimeSec: 25, maxTimeSec: 60, points: 50,  gridSize: 12, threshold: 50,  type: 'fruit',            maxWrong: 5 },
+        2: { targetTimeSec: 22, maxTimeSec: 55, points: 60,  gridSize: 16, threshold: 60,  type: 'animal',           maxWrong: 5 },
+        3: { targetTimeSec: 20, maxTimeSec: 50, points: 75,  gridSize: 20, threshold: 75,  type: 'redfruit',         maxWrong: 4 },
+        4: { targetTimeSec: 18, maxTimeSec: 45, points: 90,  gridSize: 24, threshold: 90,  type: 'redfruit_similar', maxWrong: 3 }
     },
     wordhunt_senior: {
         1: { targetTimeSec: 30, maxTimeSec: 70, points: 60,  gridSize: 16, threshold: 60,  type: 'animal',         maxWrong: 5 },
@@ -71,24 +72,15 @@ const GAME_CONFIGS = {
         4: { targetTimeSec: 22, maxTimeSec: 55, points: 105, gridSize: 28, threshold: 105, type: 'similar_letter', maxWrong: 2 }
     },
     shapehunt: {
-        1: {
-            timeSec: 25, pointsPerHit: 10, threshold: 40, maxWrong: 5,
+        1: { timeSec: 25, pointsPerHit: 10, threshold: 40, maxWrong: 5,
             target: { type: 'circle', color: '#e74c3c' },
             distractors: [{ type: 'circle', color: '#3498db' }, { type: 'square', color: '#e74c3c' }],
-            totalItems: 16, targetCount: 4
-        },
-        2: {
-            timeSec: 22, pointsPerHit: 10, threshold: 60, maxWrong: 4,
+            totalItems: 16, targetCount: 4 },
+        2: { timeSec: 22, pointsPerHit: 10, threshold: 60, maxWrong: 4,
             target: { type: 'triangle', color: '#27ae60' },
-            distractors: [
-                { type: 'triangle', color: '#e67e22' },
-                { type: 'square', color: '#27ae60' },
-                { type: 'circle', color: '#27ae60' }
-            ],
-            totalItems: 24, targetCount: 6
-        },
-        3: {
-            timeSec: 20, pointsPerHit: 10, threshold: 80, maxWrong: 3,
+            distractors: [{ type: 'triangle', color: '#e67e22' }, { type: 'square', color: '#27ae60' }, { type: 'circle', color: '#27ae60' }],
+            totalItems: 24, targetCount: 6 },
+        3: { timeSec: 20, pointsPerHit: 10, threshold: 80, maxWrong: 3,
             target: { type: 'square', color: '#9b59b6', hasDot: true },
             distractors: [
                 { type: 'square', color: '#9b59b6', hasDot: false },
@@ -96,10 +88,8 @@ const GAME_CONFIGS = {
                 { type: 'square', color: '#e67e22', hasDot: true },
                 { type: 'triangle', color: '#9b59b6', hasDot: false }
             ],
-            totalItems: 36, targetCount: 8
-        },
-        4: {
-            timeSec: 18, pointsPerHit: 12, threshold: 84, maxWrong: 2,
+            totalItems: 36, targetCount: 8 },
+        4: { timeSec: 18, pointsPerHit: 12, threshold: 84, maxWrong: 2,
             target: { type: 'circle', color: '#f39c12', hasDot: true },
             distractors: [
                 { type: 'circle', color: '#f39c12', hasDot: false },
@@ -107,8 +97,7 @@ const GAME_CONFIGS = {
                 { type: 'triangle', color: '#f39c12', hasDot: false },
                 { type: 'circle', color: '#e74c3c', hasDot: true }
             ],
-            totalItems: 48, targetCount: 10
-        }
+            totalItems: 48, targetCount: 10 }
     },
     memory: {
         1: { visCount: 3, numDigits: 4, showMs: 4000, points: 30, threshold: 25, maxWrong: 3 },
@@ -140,16 +129,17 @@ const GAME_CONFIGS = {
         3: { itemsCount: 25, timePerItem: 2200, threshold: 20, maxWrong: 3, colors: 4, shapes: 5, rule: '2back' },
         4: { itemsCount: 30, timePerItem: 1800, threshold: 25, maxWrong: 3, colors: 5, shapes: 6, rule: '2back' }
     },
-        suitcase: {
-        1: { cols: 4, rows: 4, maxEmpty: 6, rounds: 5, timeLimit: 0,  threshold: 20, maxWrong: 4, dir: 'h' },
-        2: { cols: 4, rows: 4, maxEmpty: 4, rounds: 6, timeLimit: 0,  threshold: 30, maxWrong: 3, dir: 'h' },
-        3: { cols: 4, rows: 4, maxEmpty: 3, rounds: 7, timeLimit: 8,  threshold: 40, maxWrong: 3, dir: 'random' },
-        4: { cols: 6, rows: 4, maxEmpty: 4, rounds: 8, timeLimit: 5,  threshold: 50, maxWrong: 2, dir: 'random' }
+    suitcase: {
+        1: { cols: 4, rows: 4, maxEmpty: 6, rounds: 5, timeLimit: 0, threshold: 20, maxWrong: 4, dir: 'h' },
+        2: { cols: 4, rows: 4, maxEmpty: 4, rounds: 6, timeLimit: 0, threshold: 30, maxWrong: 3, dir: 'h' },
+        3: { cols: 4, rows: 4, maxEmpty: 3, rounds: 7, timeLimit: 8, threshold: 40, maxWrong: 3, dir: 'random' },
+        4: { cols: 6, rows: 4, maxEmpty: 4, rounds: 8, timeLimit: 5, threshold: 50, maxWrong: 2, dir: 'random' }
     }
 };
 
 const LEVEL_MEDALS = { 1: '🥉', 2: '🥈', 3: '🥇', 4: '💎' };
 
+// این آبجکت‌ها توسط فایل‌های بازی پر می‌شوند
 const GAME_STARTERS = {};
 const GAME_PAUSE_HOOKS = {};
 const GAME_RESUME_HOOKS = {};

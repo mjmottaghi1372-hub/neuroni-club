@@ -174,24 +174,20 @@ function startNumhuntHunt() {
             grid.appendChild(btn);
         });
 
-        if (state.noTimerMode) {
-            showStaticTimerBar(prefix + '-timer-bar', '#00b894');
-        } else {
-            startTimerBar(prefix + '-timer-bar', cfg.timeSec * 1000);
-            numhuntState.remainingSec = cfg.timeSec;
-            clearNumhuntTimer();
-            numhuntState.timerId = gameInterval(() => {
-                if (isPaused || !numhuntState || !numhuntState.active) return;
-                numhuntState.remainingSec--;
-                if (numhuntState.remainingSec <= 0) endNumhunt(false);
-            }, 1000);
-        }
+        startTimerBar(prefix + '-timer-bar', cfg.timeSec * 1000);
+        numhuntState.remainingSec = cfg.timeSec;
+        clearNumhuntTimer();
+        numhuntState.timerId = gameInterval(() => {
+            if (isPaused || !numhuntState || !numhuntState.active) return;
+            numhuntState.remainingSec--;
+            if (numhuntState.remainingSec <= 0) endNumhunt(false);
+        }, 1000);
     }, 2000);
 }
 
 function clearNumhuntTimer() {
     if (numhuntState && numhuntState.timerId) {
-        clearInterval(numhuntState.timerId);
+        clearGameInterval(numhuntState.timerId);
         gameTimers.delete(numhuntState.timerId);
         numhuntState.timerId = null;
     }
@@ -269,7 +265,7 @@ GAME_PAUSE_HOOKS.numhunt_junior = () => clearNumhuntTimer();
 GAME_PAUSE_HOOKS.numhunt_senior = () => clearNumhuntTimer();
 
 GAME_RESUME_HOOKS.numhunt_junior = () => {
-    if (!numhuntState || !numhuntState.active || state.noTimerMode) return;
+    if (!numhuntState || !numhuntState.active) return;
     if (!numhuntState.timerId) {
         numhuntState.timerId = gameInterval(() => {
             if (isPaused || !numhuntState || !numhuntState.active) return;

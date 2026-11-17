@@ -1,5 +1,5 @@
 // =====================================================
-// NAVIGATION - منوی دسته‌بندی‌شده و مدیریت صفحات
+// NAVIGATION - منوی چندصفحه‌ای (تب دامنه) + مدیریت صفحات
 // =====================================================
 
 let isNavigatingBack = false;
@@ -8,7 +8,6 @@ function showScreen(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     const el = document.getElementById(id);
     if (el) el.classList.add('active');
-    
     updateMascotVisibility();
     refreshIcons();
 }
@@ -31,6 +30,11 @@ function handlePopState() {
 }
 
 function goToMenu() {
+    // 🔧 اگر وسط ارزیابی هستیم، لغوش کن و سطح‌ها رو برگردون
+    if (window.isInAssessment) {
+        abortAssessment();
+    }
+
     window.isInDailyWorkout = false; 
     window.isInAssessment = false; 
     window.forceAssessmentLevel1 = false;
@@ -53,6 +57,20 @@ function goToMenu() {
     updateMenuDisplay();
 }
 
+// 🔧 تابع جدید برای لغو ارزیابی و برگرداندن سطح‌ها
+function abortAssessment() {
+    if (state._savedLevelsForAssessment) {
+        for (const key in state._savedLevelsForAssessment) {
+            if (state.games[key]) {
+                state.games[key].level = state._savedLevelsForAssessment[key];
+            }
+        }
+        state._savedLevelsForAssessment = null;
+    }
+    state.currentAssessmentIndex = 0;
+    saveState();
+}
+
 function updateMenuDisplay() {
     document.getElementById('menu-total-score').innerText = toFa(state.totalScore);
 
@@ -61,7 +79,7 @@ function updateMenuDisplay() {
 
     const readfreeBtn = document.getElementById('readfree-btn');
     if (readfreeBtn) readfreeBtn.classList.toggle('active', state.readFreeMode);
-    
+
     renderAssessmentCard();
     renderDailyWorkoutCard();
     renderLumosityGrid();
@@ -78,8 +96,15 @@ function updateMenuDisplay() {
 }
 
 // ==========================================
-// ساخت منوی لوموسیتی
+// منوی چندصفحه‌ای با تب دامنه (تغییر ۱)
 // ==========================================
+function getSelectedDomainTab(availableDomains) {
+    if (state.selectedDomain && availableDomains.includes(state.selectedDomain)) {
+        return state.selectedDomain;
+    }
+    return availableDomains[0];
+}
+
 function renderLumosityGrid() {
     const container = document.getElementById('menu-games-grid');
     if (!container) return;
@@ -87,75 +112,92 @@ function renderLumosityGrid() {
 
     const domainOrder = ['working_memory', 'attention', 'processing_speed', 'flexibility', 'problem_solving'];
 
-    domainOrder.forEach(domainKey => {
-        const domain = DOMAINS[domainKey];
-        let gamesInDomain = GAME_KEYS.filter(k => GAME_META[k].domain === domainKey);
-        
-        // فیلتر کردن بازی‌های متنی اگر حالت بدون خواندن فعال است
-        if (state.readFreeMode) {
-            gamesInDomain = gamesInDomain.filter(k => !GAME_META[k].needsText);
-        }
-        
-        if (gamesInDomain.length === 0) return;
-
-        const section = document.createElement('div');
-        section.className = 'domain-section';
-        
-        const header = document.createElement('div');
-        header.className = 'domain-header';
-        header.innerHTML = `
-            <i data-lucide="${domain.icon}" style="color:${domain.color};"></i>
-            <span>${domain.name}</span>
-        `;
-        section.appendChild(header);
-
-        gamesInDomain.forEach(key => {
-            const meta = GAME_META[key];
-            const lvl = getLevel(key);
-            const best = getBest(key);
-            const maxCfg = GAME_CONFIGS[key][4];
-            const isMaxed = lvl === 4 && best >= maxCfg.threshold;
-
-            let recordHtml = '';
-            if (meta.timeBased) {
-                const bestTime = state.games[key].bestTime;
-                recordHtml = bestTime 
-                    ? `<span class="lumo-badge">⏱️ ${toFa(bestTime)}s</span>`
-                    : `<span class="lumo-badge">⏱️ —</span>`;
-            } else {
-                recordHtml = `<span class="lumo-badge">🏆 ${toFa(best)}</span>`;
-            }
-
-            const card = document.createElement('button');
-            card.className = 'game-card-lumo';
-            card.style.setProperty('--domain-color', domain.color);
-            card.style.setProperty('--domain-bg', domain.bgColor);
-            
-            card.innerHTML = `
-                <div class="lumo-card-img">
-                    <i data-lucide="${meta.icon}"></i>
-                </div>
-                <div class="lumo-card-info">
-                    <div class="lumo-card-title">${meta.name}</div>
-                    <div class="lumo-card-desc">${meta.desc}</div>
-                    <div class="lumo-card-badges">
-                        <span class="lumo-badge ${isMaxed ? 'maxed' : ''}">
-                            ${isMaxed ? '⭐ استاد' : 'سطح ' + toFa(lvl)}
-                        </span>
-                        ${recordHtml}
-                    </div>
-                </div>
-            `;
-            card.onclick = () => { playSound('click'); startGame(key); };
-            section.appendChild(card);
-        });
-
-        container.appendChild(section);
+    // دامنه‌های موجود (با احتساب readFreeMode)
+    const availableDomains = domainOrder.filter(domainKey => {
+        let games = GAME_KEYS.filter(k => GAME_META[k].domain === domainKey);
+        if (state.readFreeMode) games = games.filter(k => !GAME_META[k].needsText);
+        return games.length > 0;
     });
+    if (availableDomains.length === 0) return;
+
+    const selected = getSelectedDomainTab(availableDomains);
+
+    // --- تب‌ها ---
+    const tabsContainer = document.createElement('div');
+    tabsContainer.className = 'domain-tabs';
+    availableDomains.forEach(domainKey => {
+        const domain = DOMAINS[domainKey];
+        const tab = document.createElement('button');
+        tab.type = 'button';
+        tab.className = 'domain-tab' + (domainKey === selected ? ' active' : '');
+        tab.style.setProperty('--domain-color', domain.color);
+        tab.innerHTML = `<i data-lucide="${domain.icon}"></i><span>${domain.name}</span>`;
+        tab.onclick = () => {
+            if (state.selectedDomain === domainKey) return;
+            playSound('click');
+            state.selectedDomain = domainKey;
+            saveState();
+            renderLumosityGrid();
+        };
+        tabsContainer.appendChild(tab);
+    });
+    container.appendChild(tabsContainer);
+
+    // --- بازی‌های دامنه‌ی انتخاب‌شده ---
+    const domain = DOMAINS[selected];
+    let gamesInDomain = GAME_KEYS.filter(k => GAME_META[k].domain === selected);
+    if (state.readFreeMode) gamesInDomain = gamesInDomain.filter(k => !GAME_META[k].needsText);
+
+    const section = document.createElement('div');
+    section.className = 'domain-section';
+    section.style.animation = 'screenFadeIn 0.3s ease-out';
+
+    gamesInDomain.forEach(key => {
+        const meta = GAME_META[key];
+        const lvl = getLevel(key);
+        const best = getBest(key);
+        const maxCfg = GAME_CONFIGS[key][4];
+        const isMaxed = lvl === 4 && best >= maxCfg.threshold;
+
+        let recordHtml;
+        if (meta.timeBased) {
+            const bestTime = state.games[key].bestTime;
+            recordHtml = bestTime
+                ? `<span class="lumo-badge">⏱️ ${toFa(bestTime)}s</span>`
+                : `<span class="lumo-badge">⏱️ —</span>`;
+        } else {
+            recordHtml = `<span class="lumo-badge">🏆 ${toFa(best)}</span>`;
+        }
+
+        const card = document.createElement('button');
+        card.className = 'game-card-lumo';
+        card.style.setProperty('--domain-color', domain.color);
+        card.style.setProperty('--domain-bg', domain.bgColor);
+        card.innerHTML = `
+            <div class="lumo-card-img">
+                <i data-lucide="${meta.icon}"></i>
+            </div>
+            <div class="lumo-card-info">
+                <div class="lumo-card-title">${meta.name}</div>
+                <div class="lumo-card-desc">${meta.desc}</div>
+                <div class="lumo-card-badges">
+                    <span class="lumo-badge ${isMaxed ? 'maxed' : ''}">
+                        ${isMaxed ? '⭐ استاد' : 'سطح ' + toFa(lvl)}
+                    </span>
+                    ${recordHtml}
+                </div>
+            </div>
+        `;
+        card.onclick = () => { playSound('click'); startGame(key); };
+        section.appendChild(card);
+    });
+    container.appendChild(section);
+
+    refreshIcons();
 }
 
 // ==========================================
-// بخش استریک
+// استریک
 // ==========================================
 function showStreakInfo() {
     const streak = state.streak || 0;
@@ -301,11 +343,7 @@ function renderDailyWorkoutCard() {
 
     if (!dw || dw.date !== today) {
         const selected = generateSmartWorkout();
-        state.dailyWorkout = {
-            date: today,
-            games: selected,
-            completed: []
-        };
+        state.dailyWorkout = { date: today, games: selected, completed: [] };
         saveState();
         dw = state.dailyWorkout;
     }
@@ -322,7 +360,11 @@ function renderDailyWorkoutCard() {
         btn.disabled = true;
     } else {
         card.classList.remove('finished');
-        desc.innerText = '۳ بازی برای تقویت مغزت آماده‌ست!';
+        if (state.assessmentCompleted) {
+            desc.innerText = '۳ بازی برای تقویت نقاط ضعف مغزت آماده‌ست! 🧠';
+        } else {
+            desc.innerText = '۳ بازی برای تقویت مغزت آماده‌ست!';
+        }
         btn.innerText = 'شروع تمرین 🚀';
         btn.disabled = false;
     }
@@ -348,11 +390,32 @@ function generateSmartWorkout() {
         return true;
     });
 
+    // 🔧 اگر ارزیابی انجام شده، دامنه‌های ضعیف‌تر اولویت بالاتری می‌گیرن
+    let domainPriorities = {};
+    if (state.assessmentCompleted && state.cognitiveProfile) {
+        for (let d in state.cognitiveProfile) {
+            // هرچی درصد کمتر باشه، اولویت بالاتره (مثلا 20% بهتر از 80% هست)
+            // پس 100 منهای درصد رو به عنوان امتیاز ضعف می‌گیریم
+            let score = state.cognitiveProfile[d] !== null ? state.cognitiveProfile[d] : 50;
+            domainPriorities[d] = 100 - score; 
+        }
+    }
+
     let candidates = validGames.map(key => {
         const lvl = getLevel(key);
         const domain = GAME_META[key].domain;
-        let priority = (4 - lvl) * 10 + Math.random() * 5;
-        return { key, domain, priority };
+        
+        // اولویت پایه: سطح پایین‌تر = اولویت بالاتر
+        let basePriority = (4 - lvl) * 10;
+        
+        // اولویت ارزیابی: ضعف بیشتر = اولویت بالاتر
+        let assessmentPriority = 0;
+        if (state.assessmentCompleted && domainPriorities[domain] !== undefined) {
+            assessmentPriority = domainPriorities[domain] * 0.8; // وزن 80%
+        }
+
+        let totalPriority = basePriority + assessmentPriority + Math.random() * 5;
+        return { key, domain, priority: totalPriority };
     });
 
     candidates.sort((a, b) => b.priority - a.priority);
@@ -362,6 +425,14 @@ function generateSmartWorkout() {
         if (!usedDomains.has(c.domain)) {
             selected.push(c.key);
             usedDomains.add(c.domain);
+        }
+    }
+    
+    // اگر به هر دلیلی کمتر از ۳ تا انتخاب شد، از بقیه اضافه کن
+    if (selected.length < 3) {
+        for (let c of candidates) {
+            if (selected.length >= 3) break;
+            if (!selected.includes(c.key)) selected.push(c.key);
         }
     }
 
@@ -378,7 +449,6 @@ function startDailyWorkout() {
 
     window.isInDailyWorkout = true;
     window.isInAssessment = false;
-    
     startGame(dw.games[nextIndex]);
 }
 
@@ -394,7 +464,7 @@ function showStats() {
 function renderStatsPage() {
     document.getElementById('stats-bpi').innerText = toFa(state.totalScore);
     document.getElementById('stats-streak').innerText = toFa(state.streak || 0);
-    
+
     let badgeCount = countBadges();
     document.getElementById('stats-badges').innerText = toFa(badgeCount);
 
@@ -404,12 +474,10 @@ function renderStatsPage() {
     for (const domainKey in DOMAINS) {
         const domain = DOMAINS[domainKey];
         const gamesInDomain = GAME_KEYS.filter(k => GAME_META[k].domain === domainKey);
-        
+
         let totalLvlProgress = 0;
-        gamesInDomain.forEach(k => {
-            totalLvlProgress += (getLevel(k) - 1);
-        });
-        
+        gamesInDomain.forEach(k => { totalLvlProgress += (getLevel(k) - 1); });
+
         const maxPossibleLvl = gamesInDomain.length * 3;
         const percent = maxPossibleLvl > 0 ? (totalLvlProgress / maxPossibleLvl) * 100 : 0;
 
@@ -443,17 +511,13 @@ function renderActivityChart() {
 
     const days = [];
     const dayNames = ['یک', 'دو', 'سه', 'چهار', 'پنج', 'جمعه', 'شنبه'];
-    
+
     for (let i = 6; i >= 0; i--) {
         const d = new Date();
         d.setDate(d.getDate() - i);
         const dateStr = d.toISOString().slice(0, 10);
         const dayIndex = d.getDay();
-        days.push({
-            dateStr,
-            label: dayNames[dayIndex],
-            count: 0
-        });
+        days.push({ dateStr, label: dayNames[dayIndex], count: 0 });
     }
 
     if (state.gameHistory) {
@@ -469,7 +533,6 @@ function renderActivityChart() {
 
     days.forEach(day => {
         const heightPercent = (day.count / maxCount) * 100;
-        
         const dayEl = document.createElement('div');
         dayEl.className = 'activity-day';
         dayEl.innerHTML = `
@@ -490,12 +553,12 @@ function renderActivityChart() {
 }
 
 // ==========================================
-// ASSESSMENT (ارزیابی اولیه)
+// ASSESSMENT
 // ==========================================
 function renderAssessmentCard() {
     const card = document.getElementById('assessment-card');
     if (!card) return;
-    
+
     if (state.assessmentCompleted) {
         card.style.background = 'linear-gradient(135deg, #00b894, #27ae60)';
         card.querySelector('.as-btn').innerText = 'مشاهده پروفایل';
@@ -515,75 +578,82 @@ function startAssessment() {
         showAssessmentResult();
         return;
     }
-    
+
     playSound('click');
     window.isInAssessment = true;
     window.isInDailyWorkout = false;
-    
-    // انتخاب دقیقاً ۱ بازی از هر ۵ دامنه (با در نظر گرفتن حالت بدون خواندن)
+
     const availableDomains = Object.keys(DOMAINS);
     const assessmentGames = [];
     const selectedDomains = [];
-    
+
     availableDomains.forEach(domain => {
         let domainGames = GAME_KEYS.filter(k => GAME_META[k].domain === domain);
         if (state.readFreeMode) {
             domainGames = domainGames.filter(k => !GAME_META[k].needsText);
         }
-        
         if (domainGames.length > 0) {
-            // اولویت با بازی‌هایی که سطح پایین‌تری دارند
             domainGames.sort((a, b) => getLevel(a) - getLevel(b));
             assessmentGames.push(domainGames[0]);
             selectedDomains.push(domain);
         }
     });
-    
-    // ریست پروفایل
-    state.cognitiveProfile = { 
-        working_memory: null, attention: null, 
-        processing_speed: null, flexibility: null, 
-        problem_solving: null 
+
+    state.cognitiveProfile = {
+        working_memory: null, attention: null,
+        processing_speed: null, flexibility: null,
+        problem_solving: null
     };
-    
+
     state.assessmentDomains = selectedDomains;
     state.currentAssessmentQueue = assessmentGames;
     state.currentAssessmentIndex = 0;
-    
-    // ذخیره‌ی سطح‌های اصلی و اجبار به سطح ۳ (برای ارزیابی واقعی)
+
+    // ذخیره‌ی سطح‌های اصلی و اجبار به سطح ۳
     state._savedLevelsForAssessment = {};
     assessmentGames.forEach(key => {
         state._savedLevelsForAssessment[key] = state.games[key].level;
-        state.games[key].level = 3; // <--- ارزیابی در سطح ۳ انجام می‌شود
+        state.games[key].level = 3;
     });
-    
+
     window.forceAssessmentLevel1 = true;
-    
     startGame(assessmentGames[0]);
 }
 
 function showAssessmentResult() {
+    // 🔧 بازگرداندن سطح‌های اصلی (رفع باگ P0 #3)
+    if (state._savedLevelsForAssessment) {
+        for (const key in state._savedLevelsForAssessment) {
+            if (state.games[key]) {
+                state.games[key].level = state._savedLevelsForAssessment[key];
+            }
+        }
+        state._savedLevelsForAssessment = null;
+    }
+    window.isInAssessment = false;
+    window.forceAssessmentLevel1 = false;
+    state.currentAssessmentIndex = 0;
+    saveState();
+
     history.pushState({ page: 'assessment' }, '');
     showScreen('screen-assessment-result');
-    
+
     const container = document.getElementById('assessment-profile-bars');
     container.innerHTML = '';
-    
+
     const profile = state.cognitiveProfile || {};
     const testedDomains = state.assessmentDomains || Object.keys(DOMAINS);
-    
-    // هدر توضیحی
+
     const header = document.createElement('p');
     header.style.cssText = 'text-align:center; color:#636e72; font-size:13px; margin-bottom:15px;';
     header.innerText = `این ارزیابی بر اساس ${toFa(testedDomains.length)} دامنه انجام شده است.`;
     container.appendChild(header);
-    
-        // فقط دامنه‌های تست‌شده
+
     testedDomains.forEach(domainKey => {
         const domain = DOMAINS[domainKey];
         if (!domain) return;
-        let percent = profile[domainKey] || 0; // از قبل درصد است
-        
+        let percent = profile[domainKey] || 0;
+
         const row = document.createElement('div');
         row.className = 'domain-row';
         row.innerHTML = `
@@ -600,12 +670,43 @@ function showAssessmentResult() {
         `;
         container.appendChild(row);
     });
-    
+
     setTimeout(() => {
         document.querySelectorAll('.domain-bar-fill').forEach(bar => {
             bar.style.width = bar.dataset.target;
         });
     }, 100);
-    
+
     refreshIcons();
+}
+function handleReadFreeClick() {
+    if (!state.readFreeMode) {
+        // اگه قراره روشن بشه، اول توضیح بده
+        showModal(
+            '👶 حالت کودک (بدون خواندن)',
+            'در این حالت، بازی‌هایی که نیاز به خواندن کلمه یا عدد دارن مخفی می‌شن.<br><br>مناسب برای کودکانی که هنوز سواد خواندن ندارن. فقط بازی‌های تصویری نمایش داده می‌شن.',
+            [
+                { text: 'فعال کن', class: 'primary', action: () => { applyReadFree(true); closeModal(); } },
+                { text: 'انصراف', class: 'secondary', action: closeModal }
+            ]
+        );
+    } else {
+        // اگه روشنه، خاموشش کن
+        applyReadFree(false);
+    }
+}
+
+function applyReadFree(enable) {
+    state.readFreeMode = enable;
+    saveState();
+    updateMenuDisplay();
+    playSound('click');
+    showMascotMessage(enable ? 'حالت کودک فعال شد 👶🏻' : 'حالت عادی فعال شد 📖', 2500);
+    
+    // اگر توی حالت بدون خواندن، بازی متنی انتخاب شده بود، تب رو ریست کن
+    if (enable && state.selectedDomain) {
+        const domain = state.selectedDomain;
+        const hasVisual = GAME_KEYS.some(k => GAME_META[k].domain === domain && !GAME_META[k].needsText);
+        if (!hasVisual) state.selectedDomain = null;
+    }
 }
