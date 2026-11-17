@@ -1563,3 +1563,85 @@ svg.lucide {
     height: 100%;
     background: repeating-linear-gradient(to bottom, #f39c12 0, #f39c12 8px, transparent 8px, transparent 16px);
 }
+/* ============ Interactive Tutorial Stage ============ */
+.tut-stage {
+    width: 100%;
+    min-height: 180px;
+    background: #f8f9fa;
+    border: 3px dashed #b2bec3;
+    border-radius: 15px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+
+.tut-anim-item {
+    font-size: 60px;
+    margin: 10px;
+    transition: all 0.3s;
+}
+
+.tut-anim-row {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    justify-content: center;
+}
+
+/* انگشت راهنما */
+.tut-pointer {
+    font-size: 40px;
+    position: absolute;
+    z-index: 10;
+    animation: tapAnim 1s infinite alternate;
+    pointer-events: none;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+}
+
+@keyframes tapAnim {
+    0% { transform: translateY(0) scale(1); }
+    100% { transform: translateY(-15px) scale(1.1); }
+}
+
+/* افکت برای دکمه‌های درست و غلط در انیمیشن */
+.tut-btn-demo {
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 18px;
+    font-weight: bold;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.5;
+    transition: all 0.3s;
+}
+
+.tut-btn-demo.correct {
+    background: #00b894;
+    opacity: 1;
+    transform: scale(1.1);
+    box-shadow: 0 0 15px rgba(0, 184, 148, 0.5);
+}
+
+.tut-btn-demo.wrong {
+    background: #d63031;
+    opacity: 1;
+    animation: shake 0.4s;
+}
+
+.tut-demo-item {
+    padding: 15px;
+    font-size: 30px;
+    border-radius: 10px;
+    border: 2px solid #dfe6e9;
+    background: #fff;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.tut-demo-item.correct { background: #d4edda; border-color: #00b894; }
+.tut-demo-item.wrong { background: #f8d7da; border-color: #d63031; }
