@@ -1583,3 +1583,78 @@ svg.lucide {
     0%, 100% { box-shadow: 0 0 0 0 rgba(9, 132, 227, 0.75); }
     50%      { box-shadow: 0 0 0 12px rgba(9, 132, 227, 0); }
 }
+/* ============ بهینه‌سازی بنرها برای موبایل ============ */
+@media (max-width: 600px) {
+    /* کم کردن حاشیه کلی صفحه در موبایل */
+    .container {
+        padding: 15px;
+    }
+
+    /* ۱. کارت ارزیابی: تبدیل به حالت افقی و کوچک‌تر */
+    .assessment-card {
+        padding: 12px 15px;
+        margin-bottom: 12px;
+    }
+    .as-content {
+        flex-direction: row; /* آیکون، متن و دکمه کنار هم */
+        text-align: right;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    .as-icon {
+        width: 45px;
+        height: 45px;
+        font-size: 22px;
+        flex-shrink: 0;
+    }
+    .as-text {
+        flex: 1;
+    }
+    .as-text h2 {
+        font-size: 15px;
+        margin-bottom: 2px;
+    }
+    .as-text p {
+        font-size: 11px;
+        margin: 0;
+    }
+    .as-btn {
+        padding: 8px 12px;
+        font-size: 12px;
+        width: auto;
+        max-width: none;
+        min-height: 36px;
+        white-space: nowrap;
+        margin: 0;
+    }
+
+    /* ۲. کارت تمرین امروز: کوچک کردن پدینگ و آیکون‌ها */
+    .daily-workout-card {
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+    .dw-title {
+        font-size: 17px;
+    }
+    .dw-desc {
+        font-size: 12px;
+        margin-bottom: 10px;
+    }
+    .dw-games {
+        gap: 8px;
+        margin-bottom: 12px;
+    }
+    .dw-game-icon {
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+    }
+    .dw-game-icon svg.lucide {
+        width: 20px;
+        height: 20px;
+    }
+    .dw-btn {
+        padding: 10px;
+        font-size: 14px;
+    }
+}
