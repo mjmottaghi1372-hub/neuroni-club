@@ -102,24 +102,27 @@
         <div id="menu-games-grid" class="lumosity-grid"></div>
     </div>
 
-    <!-- صفحه آموزش -->
+        <!-- صفحه آموزش تعاملی -->
     <div id="screen-tutorial" class="screen">
         <div class="stats">
             <button class="back-btn" onclick="goToMenu()">⬅️</button>
             <span id="tut-domain-badge" class="level-badge">🎯</span>
-            <span>آموزش بازی</span>
+            <span id="tut-title-header">آموزش بازی</span>
         </div>
         <div class="game-box">
-            <div style="text-align:center; margin-bottom:15px;">
-                <div id="tut-icon" style="font-size:60px; line-height:1; margin-bottom:8px;">🎮</div>
+            <div style="text-align:center; margin-bottom:10px;">
                 <h2 id="tut-title" style="color:#0984e3; margin:0; font-size:22px;">بازی</h2>
             </div>
-            <div class="intro-box">
-                <h3 style="margin-top:0; color:#0984e3; font-size:17px;">قانون بازی چیه؟ 🤔</h3>
-                <ul class="intro-list" id="tut-rules"></ul>
+            
+            <!-- استیج انیمیشن (جایگزین متن) -->
+            <div id="tut-animation-stage" class="tut-stage"></div>
+            
+            <div id="tut-demo-container" class="practice-box" style="display:none; margin-top: 15px;"></div>
+            
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button id="tut-skip-btn" class="back-btn" style="flex:1; background:#dfe6e9; border:none;" onclick="skipTutorial()">رد کردن آموزش ⏭️</button>
+                <button id="tut-start-btn" style="flex:2; margin:0;" disabled>اول تمرین رو کامل کن! 🚀</button>
             </div>
-            <div id="tut-demo-container" class="practice-box" style="display:none;"></div>
-            <button id="tut-start-btn" disabled>اول تمرین رو کامل کن! 🚀</button>
         </div>
     </div>
     <!-- بازی ۱۲: Speed Match -->
