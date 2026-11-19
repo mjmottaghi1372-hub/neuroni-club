@@ -1517,22 +1517,6 @@ svg.lucide {
     height: 100%;
     background: repeating-linear-gradient(to bottom, #f39c12 0, #f39c12 8px, transparent 8px, transparent 16px);
 }
-/* ============ Interactive Tutorial Hint ============ */
-.tut-hint-pulse {
-    animation: tutHintPulse 1.2s ease-in-out infinite;
-    position: relative;
-    z-index: 3;
-    border-color: #0984e3 !important;
-}
-@keyframes tutHintPulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(9, 132, 227, 0.75); }
-    50%      { box-shadow: 0 0 0 12px rgba(9, 132, 227, 0); }
-}
-
-/* پنهان کردن جعبه‌ی متن قوانین در صفحه آموزش (تغییر ۲) */
-#screen-tutorial .intro-box {
-    display: none;
-}
 /* ============ Interactive Tutorial (تغییر ۲) ============ */
 .tut-guide-bubble {
     background: linear-gradient(135deg, #e3f2fd, #f0f8ff);
@@ -1657,4 +1641,122 @@ svg.lucide {
         padding: 10px;
         font-size: 14px;
     }
+}
+/* ============ Family Profile UI ============ */
+.profile-welcome {
+    text-align: center;
+    margin-bottom: 25px;
+    margin-top: 20px;
+}
+.profiles-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    margin-bottom: 20px;
+}
+.profile-card {
+    background: #fff;
+    border: 3px solid #dfe6e9;
+    border-radius: 20px;
+    padding: 20px 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    position: relative;
+}
+.profile-card:hover {
+    transform: translateY(-5px);
+    border-color: #0984e3;
+    box-shadow: 0 8px 20px rgba(9, 132, 227, 0.2);
+}
+.profile-card.active-profile {
+    border-color: #00b894;
+    background: #f0fdf4;
+}
+.profile-avatar {
+    font-size: 60px;
+    line-height: 1;
+    margin-bottom: 10px;
+}
+.profile-name {
+    font-weight: 900;
+    font-size: 18px;
+    color: #2d3436;
+    margin-bottom: 5px;
+}
+.profile-score {
+    font-size: 13px;
+    color: #f39c12;
+    font-weight: 800;
+    background: #fff9e6;
+    padding: 3px 10px;
+    border-radius: 10px;
+    border: 1px solid #f1c40f;
+}
+
+/* دکمه افزودن عضو جدید */
+.add-profile-btn {
+    background: #e3f2fd;
+    color: #0984e3;
+    border: 3px dashed #0984e3;
+    width: 100%;
+    padding: 20px;
+    border-radius: 20px;
+    font-size: 17px;
+    font-weight: 800;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 30px;
+    transition: all 0.2s;
+}
+.add-profile-btn:hover {
+    background: #d0e8ff;
+    transform: scale(1.02);
+}
+/* ============ Mascot Clickable Bubble ============ */
+.mascot-bubble.clickable {
+    cursor: pointer;
+    border-color: #f39c12;
+    background: #fff9e6;
+    animation: mascot-pulse 1.5s infinite;
+    pointer-events: auto; /* چون mascot خودش pointer-events: none بود */
+}
+@keyframes mascot-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(243, 156, 18, 0.5); }
+    70% { box-shadow: 0 0 0 10px rgba(243, 156, 18, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(243, 156, 18, 0); }
+}
+/* ============ Empty Family Roles ============ */
+.profile-card.empty-role {
+    background: #f8f9fa;
+    border: 3px dashed #b2bec3;
+    opacity: 0.8;
+}
+.profile-card.empty-role:hover {
+    border-color: #0984e3;
+    background: #e3f2fd;
+    opacity: 1;
+}
+.profile-avatar-empty {
+    font-size: 50px;
+    color: #b2bec3;
+    margin-bottom: 10px;
+}
+.profile-name-empty {
+    font-weight: 800;
+    font-size: 16px;
+    color: #b2bec3;
+}
+.profile-role-label {
+    font-size: 12px;
+    color: #636e72;
+    margin-top: 5px;
+    background: #dfe6e9;
+    padding: 2px 8px;
+    border-radius: 10px;
 }

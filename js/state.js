@@ -1,27 +1,36 @@
 // =====================================================
-// STATE - مدیریت وضعیت اپلیکیشن
+// STATE - مدیریت وضعیت و پروفایل‌ها (Multi-Profile)
 // =====================================================
 
-let state = null;   // در initState مقداردهی می‌شود
+let appDB = null;   // کل دیتابیس (شامل همه اعضای خانواده)
+let state = null;   // فقط اطلاعات پروفایلِ فعال
 let pendingStreakMessage = null;
 let gameStartTime = 0;
 let _saveTimeout = null;
 
 async function initState() {
-    state = await loadStateFromDB();
+    appDB = await loadDatabase();
+    
+    // اگر هیچ پروفایلی وجود نداره (اولین بار)، متغیر state رو null بذار و خارج شو
+    if (!appDB.activeProfileId || !appDB.profiles[appDB.activeProfileId]) {
+        state = null;
+        return; 
+    }
+    
+    // اگر پروفایل فعال وجود داشت، لودش کن
+    state = appDB.profiles[appDB.activeProfileId];
 
+    // اطمینان از وجود فیلدهای ضروری
     if (!state.gameHistory) state.gameHistory = [];
     if (!state.dailyWorkout) state.dailyWorkout = { date: null, games: [], completed: [] };
-    if (!state.cognitiveProfile) state.cognitiveProfile = {
-        working_memory: null, attention: null, processing_speed: null, flexibility: null, problem_solving: null
-    };
+    if (!state.cognitiveProfile) state.cognitiveProfile = { working_memory: null, attention: null, processing_speed: null, flexibility: null, problem_solving: null };
     if (state.assessmentCompleted === undefined) state.assessmentCompleted = false;
     if (state.readFreeMode === undefined) state.readFreeMode = false;
     if (state.currentAssessmentIndex === undefined) state.currentAssessmentIndex = 0;
     if (state.currentAssessmentQueue === undefined) state.currentAssessmentQueue = [];
     if (state.assessmentDomains === undefined) state.assessmentDomains = [];
     if (state._savedLevelsForAssessment === undefined) state._savedLevelsForAssessment = null;
-
+    
     for (const key of GAME_KEYS) {
         if (!state.games[key]) {
             state.games[key] = { level: 1, best: 0, bestTime: null, badges: { 1: false, 2: false, 3: false, 4: false }, tutorialSeen: false, introSeen: false };
@@ -37,16 +46,55 @@ async function initState() {
 function saveState() {
     if (_saveTimeout) clearTimeout(_saveTimeout);
     _saveTimeout = setTimeout(() => {
-        saveStateToDB(state);
+        appDB.profiles[appDB.activeProfileId] = state; // بروزرسانی پروفایل فعال در دیتابیس
+        saveDatabase(appDB);
         _saveTimeout = null;
     }, 100);
 }
 
 function saveStateNow() {
     if (_saveTimeout) { clearTimeout(_saveTimeout); _saveTimeout = null; }
-    return saveStateToDB(state);
+    appDB.profiles[appDB.activeProfileId] = state;
+    return saveDatabase(appDB);
 }
 
+// =====================================================
+// توابع مدیریت پروفایل (جدید)
+// =====================================================
+
+function getAllProfiles() {
+    return Object.values(appDB.profiles);
+}
+
+function switchProfile(profileId) {
+    if (!appDB.profiles[profileId]) return false;
+    appDB.activeProfileId = profileId;
+    state = appDB.profiles[profileId];
+    saveDatabase(appDB);
+    return true;
+}
+
+function addNewProfile(name, avatar) {
+    const newProfile = createDefaultState(name, avatar);
+    appDB.profiles[newProfile.profileId] = newProfile;
+    saveDatabase(appDB);
+    return newProfile.profileId;
+}
+
+function deleteProfile(profileId) {
+    if (Object.keys(appDB.profiles).length <= 1) return false; // حداقل یک پروفایل باید بمونه
+    delete appDB.profiles[profileId];
+    if (appDB.activeProfileId === profileId) {
+        appDB.activeProfileId = Object.keys(appDB.profiles)[0];
+        state = appDB.profiles[appDB.activeProfileId];
+    }
+    saveDatabase(appDB);
+    return true;
+}
+
+// =====================================================
+// توابع عمومی (بدون تغییر)
+// =====================================================
 function getLevel(key) { return state.games[key].level; }
 function setLevel(key, val) { state.games[key].level = val; saveState(); }
 function getBest(key) { return state.games[key].best; }

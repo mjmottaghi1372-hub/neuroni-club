@@ -45,17 +45,52 @@
     <div class="mascot-bubble" id="mascot-bubble"></div>
     <div class="mascot-face">🦉</div>
 </div>
+    <!-- صفحه انتخاب پروفایل (جدید) -->
+       <!-- صفحه انتخاب پروفایل (خانوادگی) -->
+    <div id="screen-profile-select" class="screen active">
+        <div class="profile-welcome">
+            <h1 style="color:#0984e3; margin-bottom:10px;">باشگاه نورونی‌ها 🧠</h1>
+            <p style="font-weight:800; font-size:20px; color:#2d3436;">خانواده کی بازی می‌کنه؟ 👨‍👩‍👧‍👦</p>
+            <p style="font-size:13px; color:#636e72; margin-top:5px;">برای شروع مسابقه خانوادگی، اعضای خانواده رو اضافه کن!</p>
+        </div>
+        <div id="profiles-grid" class="profiles-grid"></div>
+        
+        <!-- دکمه افزودن عضو جدید (حالا به شکل یک کارت بزرگ) -->
+        <button id="add-profile-btn" class="add-profile-btn" onclick="showAddProfileModal()">
+            <i data-lucide="user-plus"></i>
+            <span>افزودن عضو جدید به خانواده</span>
+        </button>
+    </div>
 
+    <!-- صفحه جدول رده‌بندی خانوادگی (جدید) -->
+    <div id="screen-family" class="screen">
+        <div class="stats">
+            <button class="back-btn" onclick="goToMenu()">⬅️</button>
+            <span>👨‍👩‍👧‍👦 جدول رده‌بندی خانواده</span>
+            <span></span>
+        </div>
+        <div class="game-box">
+            <p style="margin-top:0; color:#636e72;">بر اساس مجموع امتیازهای کسب شده</p>
+            <div id="family-leaderboard" class="family-leaderboard"></div>
+        </div>
+    </div>
 <div class="container">
     <h1>باشگاه نورونی‌ها 🧠</h1>
 
     <!-- منوی اصلی -->
     <div id="screen-menu" class="screen active">
-        <div class="menu-header">
-            <div>
-                <span>سلام قهرمان! 👋</span><br>
-                <span>⭐ امتیاز کل: <span id="menu-total-score" style="color:#d63031; font-size:17px;">۰</span></span>
+                <div class="menu-header">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span id="menu-profile-avatar" style="font-size:28px; line-height:1;">🦁</span>
+                <div>
+                    <span style="font-size:14px; color:#636e72;">سلام</span>
+                    <strong id="menu-profile-name" style="color:#0984e3; font-size:16px;">بازیکن</strong>! 👋<br>
+                    <span>⭐ امتیاز کل: <span id="menu-total-score" style="color:#d63031; font-size:15px;">۰</span></span>
+                </div>
             </div>
+            <button class="back-btn" onclick="showProfileSelect()" title="تغییر بازیکن" style="min-width:40px; min-height:40px; padding:0;">
+                <i data-lucide="refresh-cw"></i>
+            </button>
         </div>
 
         <!-- کارت ارزیابی اولیه -->
@@ -103,7 +138,10 @@
                 <i data-lucide="trophy"></i>
                 <span class="tool-text">جوایز</span>
             </button>
-            
+            <button class="tool-btn" onclick="showFamilyLeaderboard()">
+                <i data-lucide="crown"></i>
+                <span class="tool-text">خانواده</span>
+            </button>
             <button class="tool-btn" onclick="requestParentReport()">
                 <i data-lucide="users"></i>
                 <span class="tool-text">والدین</span>

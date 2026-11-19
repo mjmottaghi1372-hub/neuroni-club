@@ -1,5 +1,5 @@
 // =====================================================
-// NAVIGATION - منوی چندصفحه‌ای (تب دامنه) + مدیریت صفحات
+// NAVIGATION - منوی چندصفحه‌ای + مدیریت پروفایل‌ها
 // =====================================================
 
 let isNavigatingBack = false;
@@ -14,6 +14,10 @@ function showScreen(id) {
 
 function handlePopState() {
     const activeScreen = document.querySelector('.screen.active')?.id || '';
+    if (activeScreen === 'screen-profile-select') {
+        history.pushState({ page: 'profiles' }, '');
+        return;
+    }
     if (activeScreen === 'screen-menu') {
         history.pushState({ page: 'menu' }, '');
         return;
@@ -29,8 +33,184 @@ function handlePopState() {
     }
 }
 
+// ==========================================
+// سیستم پروفایل‌ها (خانوادگی)
+// ==========================================
+function showProfileSelect() {
+    history.pushState({ page: 'profiles' }, '');
+    showScreen('screen-profile-select');
+    renderProfiles();
+}
+
+function renderProfiles() {
+    const grid = document.getElementById('profiles-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    
+    // ۱. رندر کردن نقش‌های ثابت (خانواده اصلی)
+    FAMILY_ROLES.forEach(role => {
+        const p = appDB.profiles[role.id];
+        const card = document.createElement('button');
+        
+        if (p) {
+            // نقش پر شده
+            card.className = 'profile-card' + (p.profileId === appDB.activeProfileId ? ' active-profile' : '');
+            card.innerHTML = `
+                <div class="profile-avatar">${p.avatar}</div>
+                <div class="profile-name">${p.profileName}</div>
+                <div class="profile-role-label">${role.label}</div>
+                <div class="profile-score">⭐ ${toFa(p.totalScore)}</div>
+            `;
+            card.onclick = () => {
+                playSound('click');
+                switchProfile(p.profileId);
+                goToMenu();
+            };
+        } else {
+            // نقش خالی (غیرفعال)
+            card.className = 'profile-card empty-role';
+            card.innerHTML = `
+                <div class="profile-avatar-empty">+</div>
+                <div class="profile-name-empty">${role.label}</div>
+                <div class="profile-role-label">هنوز ساخته نشده</div>
+            `;
+            card.onclick = () => {
+                playSound('click');
+                showAddProfileModal(role.id);
+            };
+        }
+        grid.appendChild(card);
+    });
+
+    // ۲. رندر کردن اعضای اضافی (سفارشی) که با دکمه + اضافه شدن
+    const customProfiles = Object.values(appDB.profiles).filter(p => !FAMILY_ROLES.some(r => r.id === p.profileId));
+    
+    customProfiles.forEach(p => {
+        const card = document.createElement('button');
+        card.className = 'profile-card' + (p.profileId === appDB.activeProfileId ? ' active-profile' : '');
+        card.innerHTML = `
+            <div class="profile-avatar">${p.avatar}</div>
+            <div class="profile-name">${p.profileName}</div>
+            <div class="profile-role-label">عضو مهمان</div>
+            <div class="profile-score">⭐ ${toFa(p.totalScore)}</div>
+        `;
+        card.onclick = () => {
+            playSound('click');
+            switchProfile(p.profileId);
+            goToMenu();
+        };
+        grid.appendChild(card);
+    });
+
+    refreshIcons();
+}
+
+function showAddProfileModal(roleId = null) {
+    const role = roleId ? FAMILY_ROLES.find(r => r.id === roleId) : null;
+    
+    const modalTitle = role ? `ساخت پروفایل ${role.label}` : 'افزودن عضو جدید';
+    const avatars = ['🦁', '🐼', '🦊', '🐯', '🐸', '🚀', '🦄', '🐶', '🐱', '🧸', '👩', '👨', '👵', '👴'];
+    let selectedAvatar = role ? role.defaultAvatar : '👤';
+
+    const modalText = `
+        <p style="margin-top:0; font-weight:700; color:#0984e3;">اسم ${role ? role.label : 'عضو جدید'} چیه؟</p>
+        <input type="text" id="new-profile-name" placeholder="اسم رو وارد کن..." style="width:100%; padding:12px; font-size:16px; border:2px solid #b2bec3; border-radius:8px; margin-bottom:15px; text-align:center; font-family:inherit;">
+        <div style="font-size:14px; font-weight:700; margin-bottom:10px; color:#636e72;">یک آواتار انتخاب کن:</div>
+        <div id="avatar-selector" style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center;">
+            ${avatars.map((a) => `
+                <button onclick="window._selectAvatar('${a}', this)" style="font-size:32px; background:${a===selectedAvatar?'#e3f2fd':'#fff'}; border:2px solid ${a===selectedAvatar?'#0984e3':'#dfe6e9'}; border-radius:10px; cursor:pointer; padding:5px; width:50px; height:50px; display:flex; justify-content:center; align-items:center; transition:0.15s;" class="avatar-opt">
+                    ${a}
+                </button>
+            `).join('')}
+        </div>
+    `;
+
+    window._selectAvatar = (avatar, btn) => {
+        selectedAvatar = avatar;
+        document.querySelectorAll('.avatar-opt').forEach(b => {
+            b.style.background = '#fff';
+            b.style.borderColor = '#dfe6e9';
+        });
+        btn.style.background = '#e3f2fd';
+        btn.style.borderColor = '#0984e3';
+        playSound('click');
+    };
+
+    showModal(modalTitle, modalText, [
+        { 
+            text: 'ثبت و شروع بازی', 
+            class: 'primary', 
+            action: () => {
+                const nameInput = document.getElementById('new-profile-name').value.trim();
+                if (!nameInput) {
+                    alert('لطفاً یه اسم وارد کن!');
+                    return;
+                }
+                
+                const newId = role ? role.id : 'custom_' + Date.now();
+                const newProfile = createDefaultState(newId, nameInput, selectedAvatar);
+                
+                appDB.profiles[newId] = newProfile;
+                appDB.activeProfileId = newId;
+                state = newProfile;
+                
+                saveDatabase(appDB);
+                closeModal();
+                playSound('win');
+                goToMenu();
+            } 
+        },
+        { text: 'انصراف', class: 'secondary', action: closeModal }
+    ]);
+    
+    setTimeout(() => {
+        const input = document.getElementById('new-profile-name');
+        if (input) input.focus();
+    }, 100);
+}
+
+// ==========================================
+// جدول رده‌بندی خانوادگی
+// ==========================================
+function showFamilyLeaderboard() {
+    history.pushState({ page: 'family' }, '');
+    showScreen('screen-family');
+    
+    const container = document.getElementById('family-leaderboard');
+    container.innerHTML = '';
+    
+    const profiles = getAllProfiles().sort((a, b) => b.totalScore - a.totalScore);
+    
+    profiles.forEach((p, index) => {
+        const rank = index + 1;
+        let rankIcon = toFa(rank);
+        if (rank === 1) rankIcon = '👑';
+        else if (rank === 2) rankIcon = '🥈';
+        else if (rank === 3) rankIcon = '🥉';
+        
+        const row = document.createElement('div');
+        row.className = `leaderboard-row rank-${rank}`;
+        
+        if (p.profileId === appDB.activeProfileId) {
+            row.style.border = '2px solid #00b894';
+        }
+
+        row.innerHTML = `
+            <div class="rank-badge">${rankIcon}</div>
+            <div class="leaderboard-avatar">${p.avatar}</div>
+            <div class="leaderboard-name">${p.profileName} ${p.profileId === appDB.activeProfileId ? '(شما)' : ''}</div>
+            <div class="leaderboard-score">${toFa(p.totalScore)}</div>
+        `;
+        container.appendChild(row);
+    });
+    
+    refreshIcons();
+}
+
+// ==========================================
+// منوی اصلی
+// ==========================================
 function goToMenu() {
-    // 🔧 اگر وسط ارزیابی هستیم، لغوش کن و سطح‌ها رو برگردون
     if (window.isInAssessment) {
         abortAssessment();
     }
@@ -57,7 +237,6 @@ function goToMenu() {
     updateMenuDisplay();
 }
 
-// 🔧 تابع جدید برای لغو ارزیابی و برگرداندن سطح‌ها
 function abortAssessment() {
     if (state._savedLevelsForAssessment) {
         for (const key in state._savedLevelsForAssessment) {
@@ -72,6 +251,12 @@ function abortAssessment() {
 }
 
 function updateMenuDisplay() {
+    // بروزرسانی اطلاعات پروفایل در هدر
+    const nameEl = document.getElementById('menu-profile-name');
+    const avatarEl = document.getElementById('menu-profile-avatar');
+    if (nameEl) nameEl.innerText = state.profileName;
+    if (avatarEl) avatarEl.innerText = state.avatar;
+
     document.getElementById('menu-total-score').innerText = toFa(state.totalScore);
 
     const streakVal = document.getElementById('streak-value');
@@ -90,14 +275,25 @@ function updateMenuDisplay() {
             showMascotMessage(pendingStreakMessage, 4000);
             pendingStreakMessage = null;
         } else {
-            showMascotMessage('یه بازی انتخاب کن! 🎮', 3000);
+            const missingRoles = FAMILY_ROLES.filter(r => !appDB.profiles[r.id]);
+            
+            if (missingRoles.length > 0) {
+                const roleToPrompt = missingRoles[Math.floor(Math.random() * missingRoles.length)];
+                showMascotMessage(
+                    `نقش ${roleToPrompt.label} هنوز خالیه! بیا پروفایلش رو بسازیم. (اینجا کلیک کن) 👨‍👩‍👧‍👦`, 
+                    8000, 
+                    () => {
+                        playSound('click');
+                        showAddProfileModal(roleToPrompt.id);
+                    }
+                );
+            } else {
+                showMascotMessage('همه اعضای خانواده آماده‌ان! یه بازی انتخاب کن یا با دکمه + بقیه رو اضافه کن! 🎮', 4000);
+            }
         }
     }, 500);
 }
 
-// ==========================================
-// منوی چندصفحه‌ای با تب دامنه (تغییر ۱)
-// ==========================================
 function getSelectedDomainTab(availableDomains) {
     if (state.selectedDomain && availableDomains.includes(state.selectedDomain)) {
         return state.selectedDomain;
@@ -112,7 +308,6 @@ function renderLumosityGrid() {
 
     const domainOrder = ['working_memory', 'attention', 'processing_speed', 'flexibility', 'problem_solving'];
 
-    // دامنه‌های موجود (با احتساب readFreeMode)
     const availableDomains = domainOrder.filter(domainKey => {
         let games = GAME_KEYS.filter(k => GAME_META[k].domain === domainKey);
         if (state.readFreeMode) games = games.filter(k => !GAME_META[k].needsText);
@@ -122,7 +317,6 @@ function renderLumosityGrid() {
 
     const selected = getSelectedDomainTab(availableDomains);
 
-    // --- تب‌ها ---
     const tabsContainer = document.createElement('div');
     tabsContainer.className = 'domain-tabs';
     availableDomains.forEach(domainKey => {
@@ -143,7 +337,6 @@ function renderLumosityGrid() {
     });
     container.appendChild(tabsContainer);
 
-    // --- بازی‌های دامنه‌ی انتخاب‌شده ---
     const domain = DOMAINS[selected];
     let gamesInDomain = GAME_KEYS.filter(k => GAME_META[k].domain === selected);
     if (state.readFreeMode) gamesInDomain = gamesInDomain.filter(k => !GAME_META[k].needsText);
@@ -192,13 +385,9 @@ function renderLumosityGrid() {
         section.appendChild(card);
     });
     container.appendChild(section);
-
     refreshIcons();
 }
 
-// ==========================================
-// استریک
-// ==========================================
 function showStreakInfo() {
     const streak = state.streak || 0;
     const msg = streak >= 7
@@ -212,9 +401,6 @@ function showStreakInfo() {
         [{ text: 'فهمیدم', class: 'primary', action: closeModal }]);
 }
 
-// ==========================================
-// آلبوم نشان‌ها
-// ==========================================
 function showAlbum() {
     history.pushState({ page: 'album' }, '');
     showScreen('screen-album');
@@ -247,9 +433,6 @@ function showAlbum() {
     refreshIcons();
 }
 
-// ==========================================
-// گزارش والدی
-// ==========================================
 function requestParentReport() {
     const a = 6 + Math.floor(Math.random() * 4);
     const b = 6 + Math.floor(Math.random() * 4);
@@ -328,9 +511,6 @@ function showParentReport() {
     refreshIcons();
 }
 
-// ==========================================
-// DAILY WORKOUT
-// ==========================================
 function renderDailyWorkoutCard() {
     const card = document.getElementById('daily-workout-card');
     const preview = document.getElementById('dw-games-preview');
@@ -384,18 +564,14 @@ function generateSmartWorkout() {
     let selected = [];
     let usedDomains = new Set();
 
-    // فیلتر کردن بازی‌ها بر اساس حالت بدون خواندن
     let validGames = GAME_KEYS.filter(key => {
         if (state.readFreeMode && GAME_META[key].needsText) return false;
         return true;
     });
 
-    // 🔧 اگر ارزیابی انجام شده، دامنه‌های ضعیف‌تر اولویت بالاتری می‌گیرن
     let domainPriorities = {};
     if (state.assessmentCompleted && state.cognitiveProfile) {
         for (let d in state.cognitiveProfile) {
-            // هرچی درصد کمتر باشه، اولویت بالاتره (مثلا 20% بهتر از 80% هست)
-            // پس 100 منهای درصد رو به عنوان امتیاز ضعف می‌گیریم
             let score = state.cognitiveProfile[d] !== null ? state.cognitiveProfile[d] : 50;
             domainPriorities[d] = 100 - score; 
         }
@@ -404,16 +580,11 @@ function generateSmartWorkout() {
     let candidates = validGames.map(key => {
         const lvl = getLevel(key);
         const domain = GAME_META[key].domain;
-        
-        // اولویت پایه: سطح پایین‌تر = اولویت بالاتر
         let basePriority = (4 - lvl) * 10;
-        
-        // اولویت ارزیابی: ضعف بیشتر = اولویت بالاتر
         let assessmentPriority = 0;
         if (state.assessmentCompleted && domainPriorities[domain] !== undefined) {
-            assessmentPriority = domainPriorities[domain] * 0.8; // وزن 80%
+            assessmentPriority = domainPriorities[domain] * 0.8;
         }
-
         let totalPriority = basePriority + assessmentPriority + Math.random() * 5;
         return { key, domain, priority: totalPriority };
     });
@@ -428,7 +599,6 @@ function generateSmartWorkout() {
         }
     }
     
-    // اگر به هر دلیلی کمتر از ۳ تا انتخاب شد، از بقیه اضافه کن
     if (selected.length < 3) {
         for (let c of candidates) {
             if (selected.length >= 3) break;
@@ -452,9 +622,6 @@ function startDailyWorkout() {
     startGame(dw.games[nextIndex]);
 }
 
-// ==========================================
-// STATS DASHBOARD
-// ==========================================
 function showStats() {
     history.pushState({ page: 'stats' }, '');
     showScreen('screen-stats');
@@ -552,25 +719,20 @@ function renderActivityChart() {
     }, 100);
 }
 
-// ==========================================
-// ASSESSMENT
-// ==========================================
 function renderAssessmentCard() {
     const card = document.getElementById('assessment-card');
     if (!card) return;
 
     if (state.assessmentCompleted) {
-        card.style.background = 'linear-gradient(135deg, #00b894, #27ae60)';
-        card.querySelector('.as-btn').innerText = 'مشاهده پروفایل';
-        card.querySelector('.as-btn').onclick = () => { showAssessmentResult(); };
-        card.querySelector('p').innerText = 'ارزیابی شما با موفقیت انجام شد.';
-    } else {
-        card.style.background = 'linear-gradient(135deg, #f39c12, #e67e22)';
-        card.querySelector('.as-btn').innerText = 'شروع ارزیابی';
-        card.querySelector('.as-btn').onclick = () => { startAssessment(); };
-        card.querySelector('p').innerText = 'سطح توانایی‌های شناختی خودت رو بسنج!';
+        card.style.display = 'none';
+        return;
     }
+
     card.style.display = 'flex';
+    card.style.background = 'linear-gradient(135deg, #f39c12, #e67e22)';
+    card.querySelector('.as-btn').innerText = 'شروع ارزیابی';
+    card.querySelector('.as-btn').onclick = () => { startAssessment(); };
+    card.querySelector('p').innerText = 'سطح توانایی‌های شناختی خودت رو بسنج!';
 }
 
 function startAssessment() {
@@ -609,7 +771,6 @@ function startAssessment() {
     state.currentAssessmentQueue = assessmentGames;
     state.currentAssessmentIndex = 0;
 
-    // ذخیره‌ی سطح‌های اصلی و اجبار به سطح ۳
     state._savedLevelsForAssessment = {};
     assessmentGames.forEach(key => {
         state._savedLevelsForAssessment[key] = state.games[key].level;
@@ -621,7 +782,6 @@ function startAssessment() {
 }
 
 function showAssessmentResult() {
-    // 🔧 بازگرداندن سطح‌های اصلی (رفع باگ P0 #3)
     if (state._savedLevelsForAssessment) {
         for (const key in state._savedLevelsForAssessment) {
             if (state.games[key]) {
@@ -679,9 +839,9 @@ function showAssessmentResult() {
 
     refreshIcons();
 }
+
 function handleReadFreeClick() {
     if (!state.readFreeMode) {
-        // اگه قراره روشن بشه، اول توضیح بده
         showModal(
             '👶 حالت کودک (بدون خواندن)',
             'در این حالت، بازی‌هایی که نیاز به خواندن کلمه یا عدد دارن مخفی می‌شن.<br><br>مناسب برای کودکانی که هنوز سواد خواندن ندارن. فقط بازی‌های تصویری نمایش داده می‌شن.',
@@ -691,7 +851,6 @@ function handleReadFreeClick() {
             ]
         );
     } else {
-        // اگه روشنه، خاموشش کن
         applyReadFree(false);
     }
 }
@@ -703,7 +862,6 @@ function applyReadFree(enable) {
     playSound('click');
     showMascotMessage(enable ? 'حالت کودک فعال شد 👶🏻' : 'حالت عادی فعال شد 📖', 2500);
     
-    // اگر توی حالت بدون خواندن، بازی متنی انتخاب شده بود، تب رو ریست کن
     if (enable && state.selectedDomain) {
         const domain = state.selectedDomain;
         const hasVisual = GAME_KEYS.some(k => GAME_META[k].domain === domain && !GAME_META[k].needsText);

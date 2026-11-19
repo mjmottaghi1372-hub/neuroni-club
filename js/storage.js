@@ -1,5 +1,5 @@
 // =====================================================
-// STORAGE - IndexedDB + مهاجرت از localStorage
+// STORAGE - IndexedDB + مدیریت پروفایل‌های خانوادگی
 // =====================================================
 
 const DB_NAME = 'brainClubDB';
@@ -55,8 +55,8 @@ async function dbDelete(key) {
     });
 }
 
-// مهم: این تابع اینجا defin شده تا state.js به storage.js وابسته نباشه
-function createDefaultState() {
+// ساخت یک پروفایل جدید بر اساس نقش (مامان، بابا و...)
+function createDefaultState(roleId, name = '', avatar = '👤') {
     const games = {};
     for (const key of GAME_KEYS) {
         games[key] = {
@@ -69,7 +69,10 @@ function createDefaultState() {
         };
     }
     return {
-        version: 2,
+        profileId: roleId, // آیدی نقش (مثلا child1, mom, dad)
+        profileName: name,
+        avatar: avatar,
+        version: 3,
         totalScore: 0,
         streak: 0,
         lastPlayDate: null,
@@ -89,70 +92,95 @@ function createDefaultState() {
     };
 }
 
-// مهاجرت از localStorage (نسخه‌های قدیمی)
+// مهاجرت از دیتای قدیمی که توی localStorage ذخیره شده بود
 function migrateFromLocalStorage() {
     try {
         const totalScore = parseInt(localStorage.getItem('brainTotalScore') || '0', 10);
         const levelsRaw = localStorage.getItem('brainLevels_v2') || localStorage.getItem('brainLevels');
         const bestRaw = localStorage.getItem('brainBestScores_v2') || localStorage.getItem('brainBestScores');
         const badgesRaw = localStorage.getItem('brainBadges');
-        const streak = parseInt(localStorage.getItem('brainStreak') || '0', 10);
-        const lastPlay = localStorage.getItem('brainLastPlayDate');
-        const dailyPlay = parseInt(localStorage.getItem('brainDailyPlay') || '0', 10);
-        const dailyPlayDate = localStorage.getItem('brainDailyPlayDate');
+        
+        // اگر هیچ دیتایی نبود، یعنی کاربر جدیده
+        if (!levelsRaw && !bestRaw && !badgesRaw && totalScore === 0) return null;
 
-        // اگر هیچ داده‌ای نبود، یعنی کاربر جدید
-        if (!levelsRaw && !bestRaw && !badgesRaw && totalScore === 0 && streak === 0) {
-            return null;
+        // دیتای قبلی رو به عنوان پروفایل "فرزند اول" ذخیره می‌کنیم تا از بین نره
+        const migratedProfile = createDefaultState('child1', 'فرزند اول', '🦁');
+        migratedProfile.totalScore = totalScore;
+        
+        if (levelsRaw) {
+            const levels = JSON.parse(levelsRaw);
+            for (const key in levels) if (migratedProfile.games[key]) migratedProfile.games[key].level = levels[key];
         }
-
-        const levels = levelsRaw ? JSON.parse(levelsRaw) : {};
-        const best = bestRaw ? JSON.parse(bestRaw) : {};
-        const badges = badgesRaw ? JSON.parse(badgesRaw) : {};
-
-        const state = createDefaultState();
-        state.totalScore = totalScore || 0;
-        state.streak = streak || 0;
-        state.lastPlayDate = lastPlay || null;
-        state.dailyPlaySeconds = dailyPlay || 0;
-        state.dailyPlayDate = dailyPlayDate || null;
-
-        for (const key of GAME_KEYS) {
-            if (levels[key] !== undefined) state.games[key].level = levels[key];
-            if (best[key] !== undefined) state.games[key].best = best[key];
-            if (badges[key] && typeof badges[key] === 'object') {
-                state.games[key].badges = { ...state.games[key].badges, ...badges[key] };
+        if (bestRaw) {
+            const best = JSON.parse(bestRaw);
+            for (const key in best) if (migratedProfile.games[key]) migratedProfile.games[key].best = best[key];
+        }
+        if (badgesRaw) {
+            const badges = JSON.parse(badgesRaw);
+            for (const key in badges) {
+                if (migratedProfile.games[key] && typeof badges[key] === 'object') {
+                    migratedProfile.games[key].badges = { ...migratedProfile.games[key].badges, ...badges[key] };
+                }
             }
         }
-        return state;
+
+        return {
+            version: 3,
+            activeProfileId: 'child1',
+            profiles: { 'child1': migratedProfile }
+        };
     } catch(e) {
         console.warn('Migration from localStorage failed:', e);
         return null;
     }
 }
 
-async function loadStateFromDB() {
+// بارگذاری کل دیتابیس
+async function loadDatabase() {
     try {
         const stored = await dbGet(STATE_KEY);
-        if (stored && stored.version === 2) return stored;
+        
+        // اگر دیتابیس نسخه ۳ (چند کاربره با نقش) بود
+        if (stored && stored.version === 3) {
+            return stored;
+        }
 
+        // اگر دیتابیس نسخه ۲ (تک کاربره قدیمی) بود -> مهاجرت به نسخه ۳
+        if (stored && stored.version === 2) {
+            const newDB = {
+                version: 3,
+                activeProfileId: 'child1',
+                profiles: {
+                    'child1': { ...stored, profileId: 'child1', profileName: 'فرزند اول', avatar: '🦁', version: 3 }
+                }
+            };
+            await saveDatabase(newDB);
+            return newDB;
+        }
+
+        // اگر هیچی نبود، از localStorage چک کن
         const migrated = migrateFromLocalStorage();
         if (migrated) {
-            await dbSet(STATE_KEY, migrated);
+            await saveDatabase(migrated);
             return migrated;
         }
 
-        const fresh = createDefaultState();
-        await dbSet(STATE_KEY, fresh);
-        return fresh;
+        // اگر کاربر کاملاً جدید بود، دیتابیس خالی با ساختار نقش‌ها بساز
+        const freshDB = {
+            version: 3,
+            activeProfileId: null,
+            profiles: {} // خالی شروع می‌شه تا کاربر نقش‌ها رو پر کنه
+        };
+        await saveDatabase(freshDB);
+        return freshDB;
     } catch(e) {
         console.error('DB load failed:', e);
-        return createDefaultState();
+        return { version: 3, activeProfileId: null, profiles: {} };
     }
 }
 
-async function saveStateToDB(s) {
-    try { await dbSet(STATE_KEY, s); }
+async function saveDatabase(dbData) {
+    try { await dbSet(STATE_KEY, dbData); }
     catch(e) { console.error('DB save failed:', e); }
 }
 

@@ -188,7 +188,6 @@ function startNumhuntHunt() {
 function clearNumhuntTimer() {
     if (numhuntState && numhuntState.timerId) {
         clearGameInterval(numhuntState.timerId);
-        gameTimers.delete(numhuntState.timerId);
         numhuntState.timerId = null;
     }
 }

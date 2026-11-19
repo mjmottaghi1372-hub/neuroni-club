@@ -139,7 +139,6 @@ function handleSymboldiffClick(div, idx) {
 function clearSymboldiffTimer() {
     if (symboldiffState && symboldiffState.timerId) {
         clearGameInterval(symboldiffState.timerId);
-        gameTimers.delete(symboldiffState.timerId);
         symboldiffState.timerId = null;
     }
 }

@@ -173,6 +173,44 @@ function displayResult(gameName, key, lvl, best, threshold, passed, forceFail, n
     document.getElementById('sr-emoji').innerText = passed ? '🏆' : (forceFail ? '💔' : '💪');
     document.getElementById('sr-title').innerText = gameName + ' تموم شد!';
 
+    // ==========================================
+    // 👇 نمایش رتبه خانوادگی 👇
+    // ==========================================
+    let rankHtml = '';
+    const allProfiles = getAllProfiles().sort((a, b) => b.totalScore - a.totalScore);
+    
+    if (allProfiles.length > 1) {
+        const myRank = allProfiles.findIndex(p => p.profileId === state.profileId) + 1;
+        
+        if (myRank === 1) {
+            rankHtml = `<div style="background:#fff9e6; border:2px solid #f39c12; padding:10px; border-radius:10px; margin-top:10px; font-size:14px; font-weight:700; color:#d63031; text-align:center;">
+                👑 تو الان نفر اول خانواده هستی! کسی می‌تونه رکوردت رو بشکنه؟
+            </div>`;
+        } else {
+            const leader = allProfiles[0];
+            rankHtml = `<div style="background:#e3f2fd; border:2px solid #0984e3; padding:10px; border-radius:10px; margin-top:10px; font-size:14px; font-weight:700; color:#0984e3; text-align:center;">
+                🏅 تو الان نفر ${toFa(myRank)} خانواده هستی! برای شکست دادن <strong>${leader.profileName}</strong> تلاش کن!
+            </div>`;
+        }
+    } else {
+        rankHtml = `<div style="background:#f1f2f6; border:2px dashed #b2bec3; padding:10px; border-radius:10px; margin-top:10px; font-size:13px; font-weight:700; color:#636e72; text-align:center;">
+            👨‍👩‍👧‍👦 هنوز کسی رو به خانواده اضافه نکردی! از دکمه «خانواده» توی منو، بقیه رو اضافه کن تا مسابقه شروع بشه.
+        </div>`;
+    }
+
+    const resultHeader = document.querySelector('.result-header');
+    const existingRank = document.getElementById('sr-family-rank');
+    if (existingRank) existingRank.remove();
+    if (resultHeader) {
+        const rankDiv = document.createElement('div');
+        rankDiv.id = 'sr-family-rank';
+        rankDiv.innerHTML = rankHtml;
+        resultHeader.parentNode.insertBefore(rankDiv, resultHeader.nextSibling);
+    }
+    // ==========================================
+    // 👆 پایان کد رتبه خانوادگی 👆
+    // ==========================================
+
     const scoreEl = document.getElementById('sr-score');
     scoreEl.innerText = '۰';
     setTimeout(() => animateScore(currentGameScore), 150);
@@ -268,14 +306,12 @@ function displayResult(gameName, key, lvl, best, threshold, passed, forceFail, n
         heartsEl.innerHTML = html;
     }
 
-    // تعیین عملیات بعدی (ارزیابی / تمرین روزانه / عادی)
+    // تعیین عملیات بعدی
     if (window.isInAssessment) {
-        // فرمول سخت‌گیرانه‌تر: برای ۱۰۰٪ باید ۲.۵ برابر حد نصاب امتیاز بگیری
         const maxBenchmark = threshold * 2.5; 
         const scorePct = Math.min(100, (currentGameScore / maxBenchmark) * 100);
         const heartPct = (heartsLeft / totalHearts) * 100;
         
-        // وزن: ۷۰٪ برای امتیاز، ۳۰٪ برای جان‌های باقی‌مانده
         const percentage = Math.round((scorePct * 0.7) + (heartPct * 0.3));
         
         state.cognitiveProfile[meta.domain] = percentage; 

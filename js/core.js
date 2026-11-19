@@ -24,6 +24,7 @@ function initAudio() {
 }
 
 function toggleSound() {
+        if (!state) return; // 👈 این خط اضافه شد
     state.soundEnabled = !state.soundEnabled;
     saveState();
     const btn = document.getElementById('sound-btn');
@@ -38,6 +39,7 @@ function toggleSound() {
 
 function playSound(type) {
     // ۱. لرزش گوشی (Haptic)
+    if (!state) return; // 👈 این خط اضافه شد
     if ('vibrate' in navigator) {
         try {
             if (type === 'correct') navigator.vibrate(30);
@@ -90,6 +92,7 @@ function playSound(type) {
 }
 
 function speak(text) {
+    if (!state) return; // 👈 این خط اضافه شد
     if (!state.soundEnabled) return;
     if (!('speechSynthesis' in window)) return;
     try {
@@ -107,23 +110,47 @@ if ('speechSynthesis' in window) { speechSynthesis.onvoiceschanged = () => {}; }
 
 // ============ Mascot ============
 let mascotTimeout = null;
-function showMascotMessage(text, duration = 3500) {
+function showMascotMessage(text, duration = 3500, onClick = null) {
     const bubble = document.getElementById('mascot-bubble');
     if (!bubble) return;
     bubble.innerText = text;
     bubble.classList.add('visible');
+    
+    // پاک کردن رویداد قبلی
+    bubble.onclick = null;
+    bubble.classList.remove('clickable');
+    
+    // اگر تابع کلیک پاس داده شده بود، فعالش کن
+    if (onClick) {
+        bubble.classList.add('clickable');
+        bubble.onclick = (e) => {
+            e.stopPropagation();
+            onClick();
+            bubble.classList.remove('visible');
+            bubble.onclick = null;
+            bubble.classList.remove('clickable');
+        };
+    }
+
     clearTimeout(mascotTimeout);
-    mascotTimeout = setTimeout(() => bubble.classList.remove('visible'), duration);
+    mascotTimeout = setTimeout(() => {
+        bubble.classList.remove('visible');
+        bubble.onclick = null;
+        bubble.classList.remove('clickable');
+    }, duration);
 }
 
 function updateMascotVisibility() {
     const activeId = document.querySelector('.screen.active')?.id;
     const mascot = document.getElementById('mascot');
     if (!mascot) return;
-    if (activeId === 'screen-menu' || activeId === 'screen-result') mascot.classList.add('active');
-    else mascot.classList.remove('active');
+    // 🔧 اضافه کردن screen-profile-select تا جغد توی صفحه انتخاب بازیکن هم دیده بشه
+    if (activeId === 'screen-menu' || activeId === 'screen-result' || activeId === 'screen-profile-select') {
+        mascot.classList.add('active');
+    } else {
+        mascot.classList.remove('active');
+    }
 }
-
 // ============ Confetti ============
 function showConfetti() {
     const colors = ['#e74c3c', '#3498db', '#f39c12', '#27ae60', '#9b59b6', '#e91e63', '#00cec9'];

@@ -10,6 +10,13 @@ const GAME_KEYS = [
     'scattermem', 'riverranger', 'speedmatch', 'suitcase'
 ];
 
+const FAMILY_ROLES = [
+    { id: 'child1', label: 'فرزند اول', defaultAvatar: '🦁' },
+    { id: 'child2', label: 'فرزند دوم', defaultAvatar: '🐼' },
+    { id: 'mom',    label: 'مامان',      defaultAvatar: '👩' },
+    { id: 'dad',    label: 'بابا',       defaultAvatar: '👨' }
+];
+
 const DOMAINS = {
     working_memory:   { name: 'حافظه',          icon: 'brain',      color: '#3498db', bgColor: '#e3f2fd' },
     attention:        { name: 'توجه',           icon: 'target',     color: '#27ae60', bgColor: '#e8f8ef' },

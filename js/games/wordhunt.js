@@ -199,7 +199,6 @@ function updateWordhuntStopwatch() {
 function clearWordhuntTimer() {
     if (wordhuntState && wordhuntState.timerId) {
         clearGameInterval(wordhuntState.timerId);
-        gameTimers.delete(wordhuntState.timerId);
         wordhuntState.timerId = null;
     }
 }

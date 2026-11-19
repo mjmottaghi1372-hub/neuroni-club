@@ -97,7 +97,6 @@ function handleShapehuntClick(btn, isTarget) {
 function clearShapehuntTimer() {
     if (shapehuntState && shapehuntState.timerId) {
         clearGameInterval(shapehuntState.timerId);
-        gameTimers.delete(shapehuntState.timerId);
         shapehuntState.timerId = null;
     }
 }
