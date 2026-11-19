@@ -170,3 +170,4 @@ GAME_RESUME_HOOKS.symboldiff = () => {
         }, 1000);
     }
 };
+GAME_CLEANUP_HOOKS.symboldiff = () => { symboldiffState = null; clearSymboldiffTimer(); };

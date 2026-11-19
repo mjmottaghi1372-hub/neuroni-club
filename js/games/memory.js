@@ -136,23 +136,17 @@ function checkMemoryMath() {
 
     if (ans === mathAns) {
         playSound('correct');
-        if (lvl >= 4) {
-            showMemoryMotorInterference();
-        } else {
-            goToMemoryNumberRecall();
-        }
+        if (lvl >= 4) showMemoryMotorInterference();
+        else goToMemoryNumberRecall();
     } else {
         playSound('wrong');
+        memoryState.errorPhase = 'interference'; // 👈 ثبت نوع خطا
         const fb = document.getElementById(prefix + '-feedback');
         fb.style.color = '#d63031';
         fb.innerText = '❌ دوباره حساب کن!';
         input.value = '';
         input.focus();
-
-        if (registerWrong()) {
-            fb.innerText = '💔 جان تموم شد!';
-            return;
-        }
+        if (registerWrong()) fb.innerText = '💔 جان تموم شد!';
     }
 }
 
@@ -211,13 +205,11 @@ function checkMemoryNumbers() {
         updateGameScore();
     } else {
         playSound('wrong');
+        memoryState.errorPhase = 'forgetting'; // 👈 ثبت نوع خطا
         fb.style.color = '#d63031';
         fb.innerText = '❌ اعداد اشتباه بود.';
         updateGameScore();
-        if (registerWrong()) {
-            fb.innerText = '💔 جان تموم شد!';
-            return;
-        }
+        if (registerWrong()) { fb.innerText = '💔 جان تموم شد!'; return; }
     }
 
     gameTimeout(() => {
@@ -254,14 +246,23 @@ function showMemoryVisualOptions() {
             answered = true;
             document.querySelectorAll('#' + prefix + '-options .mem-opt-btn').forEach(b => b.disabled = true);
 
+            let finalMsg = 'حافظه کاری تو فوق‌العاده است!';
             if (opt === correct) {
                 playSound('correct');
                 btn.classList.add('correct');
                 currentGameScore += cfg.points / 2;
                 updateGameScore();
                 gameInProgress = false;
+                
+                // 👈 اگر قبلاً جایی خطا داده بود
+                if (memoryState.errorPhase === 'interference') {
+                    finalMsg = 'اعداد رو خوب یادت بود، فقط توی ریاضی کمی کند بودی!';
+                } else if (memoryState.errorPhase === 'forgetting') {
+                    finalMsg = 'تصویر رو درست یادت بود، اما اعداد کمی سخت بود!';
+                }
+
                 gameTimeout(() => {
-                    if (memoryState) endSingleGame(GAME_META[memoryState.key].name, 'حافظه کاری تو فوق‌العاده است!');
+                    if (memoryState) endSingleGame(GAME_META[memoryState.key].name, finalMsg);
                 }, 1500);
             } else {
                 playSound('wrong');
@@ -270,12 +271,16 @@ function showMemoryVisualOptions() {
                     if (b.innerText === correct) b.classList.add('correct');
                 });
                 updateGameScore();
-                if (registerWrong()) {
-                    return;
-                }
                 gameInProgress = false;
+                
+                if (memoryState.errorPhase) {
+                    finalMsg = 'این دور کمی سخت بود، دفعه بعد بهتر می‌شی!';
+                }
+
+                if (registerWrong()) return;
+                
                 gameTimeout(() => {
-                    if (memoryState) endSingleGame(GAME_META[memoryState.key].name, 'حافظه کاری تو فوق‌العاده است!');
+                    if (memoryState) endSingleGame(GAME_META[memoryState.key].name, finalMsg);
                 }, 1500);
             }
         };
@@ -284,3 +289,4 @@ function showMemoryVisualOptions() {
 }
 
 GAME_STARTERS.memory = startMemory;
+GAME_CLEANUP_HOOKS.memory = () => { memoryState = null; };

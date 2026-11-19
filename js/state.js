@@ -22,6 +22,10 @@ async function initState() {
 
     // اطمینان از وجود فیلدهای ضروری
     if (!state.gameHistory) state.gameHistory = [];
+    if (state.ageGroup === undefined) state.ageGroup = 'child';
+    if (state.dailyScore === undefined) state.dailyScore = 0;
+    if (state.dailyScoreDate === undefined) state.dailyScoreDate = null;
+    if (!state.dailyWorkout) state.dailyWorkout = { date: null, games: [], completed: [] };
     if (!state.dailyWorkout) state.dailyWorkout = { date: null, games: [], completed: [] };
     if (!state.cognitiveProfile) state.cognitiveProfile = { working_memory: null, attention: null, processing_speed: null, flexibility: null, problem_solving: null };
     if (state.assessmentCompleted === undefined) state.assessmentCompleted = false;

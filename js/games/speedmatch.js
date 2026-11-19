@@ -109,15 +109,15 @@ function nextSpeedMatchRound() {
         speedMatchState.phase = 'advance';
         gameTimeout(nextSpeedMatchRound, cfg.timePerItem / 1.5); 
     } else {
-        // نمایش راهنمای ثابت و واضح در طول بازی
+               // نمایش راهنمای ثابت و واضح در طول بازی
         if (rule === '2back') {
             document.getElementById(prefix + '-instruction').innerHTML = `
-                آیا با شکل <strong style="color:#d63031; font-size:18px;">دو مرحله قبل</strong> یکسان است؟
-                <br><span style="font-size:12px; color:#636e72;">(به شکل قبلی کاری نداشته باش!)</span>
+                آیا این شکل با شکل <strong style="color:#d63031; font-size:18px;">دو مرحله قبل</strong> یکسان است؟
+                <br><span style="font-size:12px; color:#636e72;">(به شکل بلافاصله قبل کاری نداشته باش!)</span>
             `;
         } else {
             document.getElementById(prefix + '-instruction').innerHTML = `
-                آیا این شکل با شکل <strong>قبلی</strong> یکسان است؟
+                آیا این شکل با شکل <strong>بلافاصله قبل</strong> یکسان است؟
             `;
         }
 
@@ -221,3 +221,4 @@ GAME_RESUME_HOOKS.speedmatch = () => {
     startTimerBar(speedMatchState.prefix + '-timer-bar', speedMatchState.cfg.timePerItem);
     speedMatchState.timerId = gameTimeout(handleSMMiss, speedMatchState.cfg.timePerItem);
 };
+GAME_CLEANUP_HOOKS.speedmatch = () => { speedMatchState = null; };

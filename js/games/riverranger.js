@@ -226,3 +226,4 @@ GAME_RESUME_HOOKS.riverranger = () => {
         el.style.animationPlayState = 'running';
     });
 };
+GAME_CLEANUP_HOOKS.riverranger = () => { riverRangerState = null; };

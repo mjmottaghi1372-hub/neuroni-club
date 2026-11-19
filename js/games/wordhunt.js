@@ -184,9 +184,8 @@ function updateWordhuntStopwatch() {
     
     // محاسبه‌ی زمان موثر (با جریمه‌ی کلیک‌های اشتباه)
     const effectiveTime = elapsedSec + (wrongClicks * 2);
-    
-    el.innerText = toFa(effectiveTime.toFixed(1));
-    
+
+    el.innerHTML = `<span class="num-isolate">${toFa(effectiveTime.toFixed(1))}</span>`;    
     // رنگ‌بندی بر اساس زمان
     container.classList.remove('warning', 'danger');
     if (effectiveTime > cfg.targetTimeSec * 1.5) {
@@ -306,3 +305,5 @@ GAME_RESUME_HOOKS.wordhunt_junior = () => {
     }
 };
 GAME_RESUME_HOOKS.wordhunt_senior = GAME_RESUME_HOOKS.wordhunt_junior;
+GAME_CLEANUP_HOOKS.wordhunt_junior = () => { wordhuntState = null; clearWordhuntTimer(); };
+GAME_CLEANUP_HOOKS.wordhunt_senior = GAME_CLEANUP_HOOKS.wordhunt_junior;

@@ -63,14 +63,24 @@
     </div>
 
     <!-- صفحه جدول رده‌بندی خانوادگی (جدید) -->
+        <!-- صفحه جدول رده‌بندی خانوادگی -->
     <div id="screen-family" class="screen">
         <div class="stats">
             <button class="back-btn" onclick="goToMenu()">⬅️</button>
-            <span>👨‍👩‍👧‍👦 جدول رده‌بندی خانواده</span>
+            <span>👨‍👩‍👧‍👦 مسابقه خانواده</span>
             <span></span>
         </div>
         <div class="game-box">
-            <p style="margin-top:0; color:#636e72;">بر اساس مجموع امتیازهای کسب شده</p>
+            <!-- چالش مشترک -->
+            <div id="family-challenge-box" class="support-box" style="margin-bottom:15px; text-align:center; background:#fff9e6; border-color:#f39c12;"></div>
+
+            <!-- تب‌های جدول -->
+            <div class="family-tabs" style="display:flex; gap:8px; margin-bottom:15px; overflow-x:auto; padding-bottom:5px;">
+                <button class="domain-tab active" onclick="switchFamilyTab('fair', this)" style="font-size:13px;">🏆 رقابت منصفانه</button>
+                <button class="domain-tab" onclick="switchFamilyTab('streak', this)" style="font-size:13px;">🔥 روزهای پیاپی</button>
+                <button class="domain-tab" onclick="switchFamilyTab('badges', this)" style="font-size:13px;">🥇 نشان‌ها</button>
+            </div>
+
             <div id="family-leaderboard" class="family-leaderboard"></div>
         </div>
     </div>
@@ -120,7 +130,7 @@
         <div class="menu-toolbar">
             <button id="streak-btn" class="tool-btn" onclick="showStreakInfo()">
                 <i data-lucide="flame"></i>
-                <span class="tool-text">استریک</span>
+                <span class="tool-text">روزهای پیاپی</span>
                 <span id="streak-value" class="tool-badge">۰</span>
             </button>
             
@@ -233,8 +243,7 @@
             <div class="bpi-info">
                 <div class="bpi-title">شاخص عملکرد مغز (BPI)</div>
                 <div class="bpi-value" id="stats-bpi">۰</div>
-                <div class="bpi-desc">امتیاز کلی شما در تمام تمرین‌ها</div>
-            </div>
+                <div class="bpi-desc" id="stats-bpi-desc">میانگین تسلط شما در تمام مهارت‌ها (از ۱۰۰۰)</div>            </div>
         </div>
         <div class="stats-card">
             <h3>🎯 پیشرفت دامنه‌های شناختی</h3>
@@ -459,9 +468,9 @@
                 <div id="me-numbers-display"></div>
                 <button id="me-btn-to-interference" onclick="startMemoryInterference()" style="display:none;">برو به مرحله بعد</button>
             </div>
-            <div id="me-interference" style="display:none;">
-                <p>قبل از جواب دادن، به این کار سریع جواب بده:</p>
-                <div id="me-math-q" style="font-size:34px; font-weight:700; margin:20px 0; color:#0984e3;"></div>
+                <div id="me-interference" style="display:none;">
+                <p>قبل از اینکه اعداد رو یادت بیاد، به این سوال ریاضی سریع جواب بده:</p>
+                <!-- بقیه کدها --><div id="me-math-q" style="font-size:34px; font-weight:700; margin:20px 0; color:#0984e3;"></div>
                 <input type="text" id="me-math-answer" class="math-input" placeholder="؟" inputmode="numeric">
                 <button onclick="checkMemoryMath()">ثبت جواب ریاضی</button>
             </div>
@@ -560,8 +569,10 @@
             <span id="scs-score">امتیاز: ۰</span>
         </div>
         <div class="game-box">
-            <p id="scs-instruction" style="font-weight:700; margin-bottom:15px; font-size:15px;">
-                روی یک خانه خالی کلیک کن تا دوربین 📷 را بگذاری، طوری که بعد از بسته شدن چمدان، روی وسیله دیگری نیفتد!
+                        <p id="scs-instruction" style="font-weight:700; margin-bottom:15px; font-size:15px; line-height:1.8;">
+                روی یک خانه خالی کلیک کن تا دوربین 📷 را بگذاری.<br>
+                وقتی چمدان از وسط تا شود، نیمه بالایی روی نیمه پایینی می‌افتد.<br>
+                <span style="color:#d63031;">دوربین را جایی بگذار که وقتی بالا روی پایین افتاد، روی وسیله‌ها نیفتد!</span>
             </p>
             
             <div class="suitcase-container">

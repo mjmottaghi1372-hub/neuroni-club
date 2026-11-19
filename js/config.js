@@ -146,7 +146,16 @@ const GAME_CONFIGS = {
 
 const LEVEL_MEDALS = { 1: '🥉', 2: '🥈', 3: '🥇', 4: '💎' };
 
+// 👇 این خط اضافه شد
+const BADGE_NAMES = { 
+    1: 'آشنایی و اتمام سطح پایه', 
+    2: 'تسلط در سطح میانی', 
+    3: 'دقت بالا در شرایط تداخل', 
+    4: 'استادی و پایداری عملکرد' 
+};
 // این آبجکت‌ها توسط فایل‌های بازی پر می‌شوند
 const GAME_STARTERS = {};
 const GAME_PAUSE_HOOKS = {};
 const GAME_RESUME_HOOKS = {};
+// این آبجکت توسط فایل‌های بازی پر می‌شود تا حافظه را پاکسازی کنند
+const GAME_CLEANUP_HOOKS = {};

@@ -26,6 +26,11 @@ function startGame(gameKey) {
 }
 
 function _beginGame(gameKey) {
+    // 👈 پاکسازی وضعیتِ بازیِ قبلی (اگر وجود داشته باشه)
+    if (currentGame && GAME_CLEANUP_HOOKS[currentGame]) {
+        try { GAME_CLEANUP_HOOKS[currentGame](); } catch(e) {}
+    }
+
     history.pushState({ page: 'game' }, '');
     currentGame = gameKey;
     currentGameScore = 0;
@@ -34,6 +39,10 @@ function _beginGame(gameKey) {
     isPaused = false;
     gameStartTime = Date.now();
     _nextAction = null;
+    consecutiveErrors = 0;
+
+    clearAllGameTimers(); 
+    setAppState(AppState.PLAYING);
 
     initWrongs();
 
@@ -53,16 +62,54 @@ function initWrongs() {
     renderWrongs();
 }
 
+let consecutiveErrors = 0;
+
 function registerWrong() {
     if (!gameActive || !gameInProgress) return false;
     currentWrongCount++;
+    consecutiveErrors++;
     renderWrongs();
+    
+    // 👈 سیستم کمک هوشمند
+    if (consecutiveErrors >= 3) {
+        consecutiveErrors = 0; // ریست کن تا دوباره گیر نکنه
+        gameInProgress = false;
+        clearAllGameTimers();
+        
+        const meta = GAME_META[currentGame];
+        const snapshotGame = currentGame;
+        
+        setTimeout(() => {
+            if (!gameActive || currentGame !== snapshotGame) return;
+            showModal(
+                '💡 یه راهنمایی!',
+                'به نظر می‌رسه این سطح برات سخته. می‌خوای یه سطح آسون‌تر رو امتحان کنی یا یه راهنمایی بگیری؟',
+                [
+                    { text: 'راهنمایی می‌خوام', class: 'primary', action: () => {
+                        closeModal();
+                        gameInProgress = true;
+                        showMascotMessage('روی جزئیات تمرکز کن و عجله نکن! 🦉', 4000);
+                    }},
+                    { text: 'سطح آسون‌تر', class: 'secondary', action: () => {
+                        closeModal();
+                        // اگر سطح بالاتر از ۱ بود، یه سطح بیاد پایین
+                        const lvl = getLevel(snapshotGame);
+                        if (lvl > 1) setLevel(snapshotGame, lvl - 1);
+                        gameActive = false;
+                        goToMenu();
+                    }}
+                ]
+            );
+        }, 1000);
+        return true;
+    }
+
     if (currentWrongCount >= wrongsLimit) {
         gameInProgress = false;
         clearAllGameTimers();
         const meta = GAME_META[currentGame];
         const snapshotGame = currentGame;
-         gameTimeout(() => {
+        setTimeout(() => {
             if (!gameActive || currentGame !== snapshotGame) return;
             endSingleGame(meta.name, '😢 خیلی اشتباه کردی! بازی تموم شد.', true);
         }, 1200);
@@ -122,7 +169,7 @@ function endSingleGame(gameName, message, forceFail) {
     if (!gameActive) return;
     gameActive = false;
     gameInProgress = false;
-    isPaused = false;
+    setAppState(AppState.RESULT); // 👈 اتصال به ماشین وضعیت
     clearAllGameTimers();
 
     const key = currentGame;
@@ -130,14 +177,26 @@ function endSingleGame(gameName, message, forceFail) {
     const lvl = getLevel(key);
     const cfg = GAME_CONFIGS[key][lvl];
     const threshold = cfg.threshold;
-    const passed = !forceFail && (currentGameScore >= threshold);
+    
+    let finalScore = currentGameScore;
+    if (currentWrongCount === 0 && currentGameScore > 0 && !forceFail) {
+        finalScore = Math.round(currentGameScore * 1.2);
+    }
 
+    const passed = !forceFail && (finalScore >= threshold);
     const prevScore = getPreviousScoreForGame(key);
 
-     state.totalScore += Math.round(currentGameScore);
+    const today = new Date().toISOString().slice(0, 10);
+    if (state.dailyScoreDate !== today) {
+        state.dailyScoreDate = today;
+        state.dailyScore = 0;
+    }
+    state.dailyScore += Math.round(finalScore);
+    state.totalScore += Math.round(finalScore);
+    
     recordPlayTime();
 
-    if (currentGameScore > getBest(key)) setBest(key, currentGameScore);
+    if (finalScore > getBest(key)) setBest(key, finalScore);
     const best = getBest(key);
 
     let unlocked = false;
@@ -160,22 +219,20 @@ function endSingleGame(gameName, message, forceFail) {
     }
 
     const heartsLeft = Math.max(0, wrongsLimit - currentWrongCount);
-    addToHistory(key, currentGameScore, lvl, passed, heartsLeft, wrongsLimit);
+    addToHistory(key, finalScore, lvl, passed, heartsLeft, wrongsLimit);
     saveState();
 
     showScreen('screen-result');
-    displayResult(gameName, key, lvl, best, threshold, passed, forceFail, newBadge, prevScore, message, heartsLeft, wrongsLimit);
+    displayResult(gameName, key, lvl, best, threshold, passed, forceFail, newBadge, prevScore, message, heartsLeft, wrongsLimit, finalScore);
 }
 
-function displayResult(gameName, key, lvl, best, threshold, passed, forceFail, newBadge, prevScore, message, heartsLeft, totalHearts) {
+function displayResult(gameName, key, lvl, best, threshold, passed, forceFail, newBadge, prevScore, message, heartsLeft, totalHearts, finalScore) {
     const meta = GAME_META[key];
 
     document.getElementById('sr-emoji').innerText = passed ? '🏆' : (forceFail ? '💔' : '💪');
     document.getElementById('sr-title').innerText = gameName + ' تموم شد!';
 
-    // ==========================================
-    // 👇 نمایش رتبه خانوادگی 👇
-    // ==========================================
+    // رتبه خانوادگی
     let rankHtml = '';
     const allProfiles = getAllProfiles().sort((a, b) => b.totalScore - a.totalScore);
     
@@ -207,17 +264,15 @@ function displayResult(gameName, key, lvl, best, threshold, passed, forceFail, n
         rankDiv.innerHTML = rankHtml;
         resultHeader.parentNode.insertBefore(rankDiv, resultHeader.nextSibling);
     }
-    // ==========================================
-    // 👆 پایان کد رتبه خانوادگی 👆
-    // ==========================================
 
+    // 👈 اینجا از finalScore استفاده شده
     const scoreEl = document.getElementById('sr-score');
     scoreEl.innerText = '۰';
-    setTimeout(() => animateScore(currentGameScore), 150);
+    setTimeout(() => animateScore(finalScore), 150);
 
     const diffEl = document.getElementById('sr-score-diff');
     if (prevScore !== null) {
-        const diff = Math.round(currentGameScore - prevScore);
+        const diff = Math.round(finalScore - prevScore); // 👈 finalScore
         if (diff > 0) {
             diffEl.style.color = '#27ae60';
             diffEl.innerText = `+${toFa(diff)} بهتر از دور قبل ✨`;
@@ -237,7 +292,7 @@ function displayResult(gameName, key, lvl, best, threshold, passed, forceFail, n
     bestBar.style.width = '0%';
     document.getElementById('sr-best').innerText = toFa(best) + ' امتیاز';
     setTimeout(() => {
-        const pct = best > 0 ? Math.min(100, (currentGameScore / best) * 100) : 0;
+        const pct = best > 0 ? Math.min(100, (finalScore / best) * 100) : 0; // 👈 finalScore
         bestBar.style.width = pct + '%';
     }, 300);
 
@@ -249,10 +304,10 @@ function displayResult(gameName, key, lvl, best, threshold, passed, forceFail, n
         progressSection.style.display = 'block';
         progressBar.style.width = '0%';
         setTimeout(() => {
-            const pct = threshold > 0 ? Math.min(100, (currentGameScore / threshold) * 100) : 0;
+            const pct = threshold > 0 ? Math.min(100, (finalScore / threshold) * 100) : 0; // 👈 finalScore
             progressBar.style.width = pct + '%';
         }, 400);
-        progressText.innerText = `${toFa(Math.round(currentGameScore))} از ${toFa(threshold)}`;
+        progressText.innerText = `${toFa(Math.round(finalScore))} از ${toFa(threshold)}`; // 👈 finalScore
     } else if (lvl < 4) {
         const newLvl = lvl + 1;
         progressSection.style.display = 'block';
@@ -270,7 +325,7 @@ function displayResult(gameName, key, lvl, best, threshold, passed, forceFail, n
     if (newBadge) {
         badgeSection.style.display = 'flex';
         document.getElementById('sr-badge-icon').innerText = LEVEL_MEDALS[lvl];
-        document.getElementById('sr-badge-name').innerText = `سطح ${toFa(lvl)} — ${meta.name}`;
+        document.getElementById('sr-badge-name').innerText = `${BADGE_NAMES[lvl]} — ${meta.name}`;
     } else {
         badgeSection.style.display = 'none';
     }
@@ -309,7 +364,7 @@ function displayResult(gameName, key, lvl, best, threshold, passed, forceFail, n
     // تعیین عملیات بعدی
     if (window.isInAssessment) {
         const maxBenchmark = threshold * 2.5; 
-        const scorePct = Math.min(100, (currentGameScore / maxBenchmark) * 100);
+        const scorePct = Math.min(100, (finalScore / maxBenchmark) * 100); // 👈 finalScore
         const heartPct = (heartsLeft / totalHearts) * 100;
         
         const percentage = Math.round((scorePct * 0.7) + (heartPct * 0.3));
@@ -475,7 +530,20 @@ function handleNextGame() {
         window.isInDailyWorkout = false;
         window.isInAssessment = false;
         startGame(action.targetGame);
-    } else if (action.action === 'workout_next' || action.action === 'assessment_next') {
+    } else if (action.action === 'workout_next') {
+        // 👈 ایستگاه استراحت بین بازی‌های تمرین روزانه
+        const nextKey = action.targetGame;
+        const nMeta = GAME_META[nextKey];
+        
+        showModal(
+            '☕ ایستگاه استراحت',
+            `آفرین! یه بازی رو تموم کردی.<br><br>حالا آماده‌ای برای بازی بعدی؟<br><b>${nMeta.name}</b>`,
+            [
+                { text: 'بزن بریم! 🚀', class: 'primary', action: () => { closeModal(); startGame(nextKey); } },
+                { text: 'برو به منو', class: 'secondary', action: () => { closeModal(); goToMenu(); } }
+            ]
+        );
+    } else if (action.action === 'assessment_next') {
         startGame(action.targetGame);
     } else if (action.action === 'assessment_done') {
         showAssessmentResult();
@@ -538,6 +606,12 @@ function saveCurrentScoreAndExit() {
     closeModal();
     gameActive = false; gameInProgress = false; isPaused = false;
     clearAllGameTimers();
+    
+    // 👈 پاکسازی وضعیت بازی
+    if (currentGame && GAME_CLEANUP_HOOKS[currentGame]) {
+        try { GAME_CLEANUP_HOOKS[currentGame](); } catch(e) {}
+    }
+
     document.getElementById('pause-overlay').style.display = 'none';
     document.getElementById('interference-overlay').style.display = 'none';
     goToMenu();

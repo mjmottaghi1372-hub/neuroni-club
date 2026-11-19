@@ -115,7 +115,15 @@ function showAddProfileModal(roleId = null) {
     const modalText = `
         <p style="margin-top:0; font-weight:700; color:#0984e3;">اسم ${role ? role.label : 'عضو جدید'} چیه؟</p>
         <input type="text" id="new-profile-name" placeholder="اسم رو وارد کن..." style="width:100%; padding:12px; font-size:16px; border:2px solid #b2bec3; border-radius:8px; margin-bottom:15px; text-align:center; font-family:inherit;">
-        <div style="font-size:14px; font-weight:700; margin-bottom:10px; color:#636e72;">یک آواتار انتخاب کن:</div>
+        
+        <div style="font-size:14px; font-weight:700; margin-bottom:5px; color:#636e72; text-align:right;">گروه سنی:</div>
+        <select id="new-profile-age" style="width:100%; padding:10px; font-size:15px; border:2px solid #b2bec3; border-radius:8px; margin-bottom:15px; font-family:inherit; background:#fff;">
+            <option value="child">کودک (زیر ۱۲ سال)</option>
+            <option value="teen">نوجوان (۱۲ تا ۱۸ سال)</option>
+            <option value="adult">بزرگسال (بالای ۱۸ سال)</option>
+        </select>
+
+        <div style="font-size:14px; font-weight:700; margin-bottom:10px; color:#636e72; text-align:right;">یک آواتار انتخاب کن:</div>
         <div id="avatar-selector" style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center;">
             ${avatars.map((a) => `
                 <button onclick="window._selectAvatar('${a}', this)" style="font-size:32px; background:${a===selectedAvatar?'#e3f2fd':'#fff'}; border:2px solid ${a===selectedAvatar?'#0984e3':'#dfe6e9'}; border-radius:10px; cursor:pointer; padding:5px; width:50px; height:50px; display:flex; justify-content:center; align-items:center; transition:0.15s;" class="avatar-opt">
@@ -142,13 +150,14 @@ function showAddProfileModal(roleId = null) {
             class: 'primary', 
             action: () => {
                 const nameInput = document.getElementById('new-profile-name').value.trim();
+                const ageInput = document.getElementById('new-profile-age').value;
                 if (!nameInput) {
                     alert('لطفاً یه اسم وارد کن!');
                     return;
                 }
                 
                 const newId = role ? role.id : 'custom_' + Date.now();
-                const newProfile = createDefaultState(newId, nameInput, selectedAvatar);
+                const newProfile = createDefaultState(newId, nameInput, selectedAvatar, ageInput);
                 
                 appDB.profiles[newId] = newProfile;
                 appDB.activeProfileId = newId;
@@ -172,15 +181,102 @@ function showAddProfileModal(roleId = null) {
 // ==========================================
 // جدول رده‌بندی خانوادگی
 // ==========================================
+// ==========================================
+// جدول رده‌بندی خانوادگی (چند بعدی)
+// ==========================================
+let currentFamilyTab = 'fair';
+
 function showFamilyLeaderboard() {
     history.pushState({ page: 'family' }, '');
     showScreen('screen-family');
+    renderFamilyChallenge();
+    renderFamilyLeaderboard('fair');
     
+    // ریست کردن تب فعال
+    document.querySelectorAll('.family-tabs .domain-tab').forEach(b => b.classList.remove('active'));
+    const firstTab = document.querySelector('.family-tabs .domain-tab');
+    if (firstTab) firstTab.classList.add('active');
+}
+
+function switchFamilyTab(tabType, btnElement) {
+    playSound('click');
+    currentFamilyTab = tabType;
+    document.querySelectorAll('.family-tabs .domain-tab').forEach(b => b.classList.remove('active'));
+    if (btnElement) btnElement.classList.add('active');
+    renderFamilyLeaderboard(tabType);
+}
+
+function renderFamilyChallenge() {
+    const box = document.getElementById('family-challenge-box');
+    if (!box) return;
+
+    // محاسبه تعداد کل بازی‌های انجام شده در ۷ روز گذشته توسط همه اعضا
+    const oneWeekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+    let totalGamesThisWeek = 0;
+    
+    getAllProfiles().forEach(p => {
+        if (p.gameHistory) {
+            totalGamesThisWeek += p.gameHistory.filter(h => h.date > oneWeekAgo).length;
+        }
+    });
+
+    const target = 15;
+    const progress = Math.min(totalGamesThisWeek, target);
+    const percent = Math.round((progress / target) * 100);
+
+    box.innerHTML = `
+        <div style="font-size:16px; margin-bottom:5px;">🎯 چالش مشترک خانواده</div>
+        <div style="font-size:13px; color:#636e72; margin-bottom:10px;">هدف: انجام ۱۵ بازی در این هفته با هم!</div>
+        <div style="background:#dfe6e9; height:12px; border-radius:6px; overflow:hidden; margin-bottom:5px;">
+            <div style="background:#f39c12; height:100%; width:${percent}%; transition:width 1s;"></div>
+        </div>
+        <div style="font-size:12px; font-weight:700; color:#d63031;"><span class="num-isolate">${toFa(progress)}</span> از <span class="num-isolate">${toFa(target)}</span> انجام شده</div>
+    `;
+}
+
+function renderFamilyLeaderboard(tabType) {
     const container = document.getElementById('family-leaderboard');
+    if (!container) return;
     container.innerHTML = '';
     
-    const profiles = getAllProfiles().sort((a, b) => b.totalScore - a.totalScore);
-    
+    const today = new Date().toISOString().slice(0, 10);
+    const DAILY_CAP = 500; 
+    let profiles = getAllProfiles();
+
+    // فیلتر و مرتب‌سازی بر اساس تب انتخابی
+    if (tabType === 'fair') {
+        profiles = profiles.map(p => {
+            let rawScore = p.totalScore;
+            let todayScore = p.dailyScoreDate === today ? (p.dailyScore || 0) : 0;
+            let cappedTodayScore = Math.min(todayScore, DAILY_CAP);
+            let effectiveScore = rawScore - todayScore + cappedTodayScore;
+
+            let multiplier = 1.0;
+            if (p.ageGroup === 'adult') multiplier = 0.6;
+            else if (p.ageGroup === 'teen') multiplier = 0.8;
+
+            let finalScore = Math.round(effectiveScore * multiplier);
+            return { ...p, sortValue: finalScore, displayValue: toFa(finalScore), badge: p.ageGroup === 'adult' ? '(ضریب ۰.۶)' : (p.ageGroup === 'teen' ? '(ضریب ۰.۸)' : '') };
+        }).sort((a, b) => b.sortValue - a.sortValue);
+    } 
+    else if (tabType === 'streak') {
+        profiles = profiles.map(p => {
+            return { ...p, sortValue: p.streak || 0, displayValue: toFa(p.streak || 0), badge: 'روز' };
+        }).sort((a, b) => b.sortValue - a.sortValue);
+    } 
+    else if (tabType === 'badges') {
+        profiles = profiles.map(p => {
+            let badgeCount = 0;
+            for (let k of GAME_KEYS) {
+                if (p.games && p.games[k] && p.games[k].badges) {
+                    badgeCount += Object.values(p.games[k].badges).filter(v => v === true).length;
+                }
+            }
+            return { ...p, sortValue: badgeCount, displayValue: toFa(badgeCount), badge: 'نشان' };
+        }).sort((a, b) => b.sortValue - a.sortValue);
+    }
+
+    // رندر کردن
     profiles.forEach((p, index) => {
         const rank = index + 1;
         let rankIcon = toFa(rank);
@@ -195,11 +291,16 @@ function showFamilyLeaderboard() {
             row.style.border = '2px solid #00b894';
         }
 
+        let ageBadge = p.badge ? `<span style="font-size:10px; background:#dfe6e9; padding:2px 6px; border-radius:5px; margin-right:5px;">${p.badge}</span>` : '';
+
         row.innerHTML = `
             <div class="rank-badge">${rankIcon}</div>
             <div class="leaderboard-avatar">${p.avatar}</div>
-            <div class="leaderboard-name">${p.profileName} ${p.profileId === appDB.activeProfileId ? '(شما)' : ''}</div>
-            <div class="leaderboard-score">${toFa(p.totalScore)}</div>
+            <div class="leaderboard-name">
+                ${p.profileName} ${p.profileId === appDB.activeProfileId ? '(شما)' : ''}
+                ${ageBadge}
+            </div>
+            <div class="leaderboard-score">${p.displayValue}</div>
         `;
         container.appendChild(row);
     });
@@ -390,14 +491,21 @@ function renderLumosityGrid() {
 
 function showStreakInfo() {
     const streak = state.streak || 0;
-    const msg = streak >= 7
-        ? `🔥 عالیه! ${toFa(streak)} روز پشت سرهم داری بازی می‌کنی!`
-        : streak >= 3
-        ? `🔥 خوب داری پیش می‌ری! ${toFa(streak)} روز پشت سرهم.`
-        : streak >= 1
-        ? `🔥 امروز ${toFa(streak)} روزه که اومدی!`
-        : 'هنوز استریک نداری. اولین بازی امروز رو شروع کن!';
-    showModal('🔥 استریک روزانه', msg + '<br><br>هر روز بازی کنی، استریکت بیشتر می‌شه!',
+    let msg = '';
+    
+    if (streak >= 7) {
+        msg = `🔥 عالیه! <span class="num-isolate">${toFa(streak)}</span> روز پیاپی داری بازی می‌کنی!`;
+    } else if (streak >= 3) {
+        msg = `🔥 خوب داری پیش می‌ری! <span class="num-isolate">${toFa(streak)}</span> روز پیاپی.`;
+    } else if (streak >= 1) {
+        msg = `🔥 امروز <span class="num-isolate">${toFa(streak)}</span> روزه که پیاپی اومدی!`;
+    } else if (state.lastPlayDate) {
+        msg = 'نگران نباش! هر روز یه شروع جدیدِ. بیا امروز از نو شروع کنیم! 💪';
+    } else {
+        msg = 'هنوز سابقه‌ای نداری. اولین بازی امروز رو شروع کن!';
+    }
+    
+    showModal('🔥 روزهای پیاپی', msg + '<br><br>هر روز بازی کنی، روزهای پیاپی‌ت بیشتر می‌شه!',
         [{ text: 'فهمیدم', class: 'primary', action: closeModal }]);
 }
 
@@ -482,11 +590,20 @@ function showParentReport() {
     const playMin = Math.floor(playSeconds / 60);
     const playSec = playSeconds % 60;
 
+        // محاسبه BPI جدید برای گزارش والدی
+    let totalLevels = 0;
+    for (const key of GAME_KEYS) totalLevels += getLevel(key);
+    const maxPossibleLevels = GAME_KEYS.length * 4;
+    const levelPart = (totalLevels / maxPossibleLevels) * 800;
+    const badgePart = (badgeCount / (GAME_KEYS.length * 4)) * 200;
+    const newBPI = Math.round(levelPart + badgePart);
+
     let html = `
-        <div class="report-stat"><span>⏰ زمان بازی امروز:</span><strong>${toFa(playMin)} دقیقه و ${toFa(playSec)} ثانیه</strong></div>
-        <div class="report-stat"><span>🔥 روزهای پشت سرهم:</span><strong>${toFa(state.streak || 0)} روز</strong></div>
-        <div class="report-stat"><span>⭐ امتیاز کل:</span><strong>${toFa(state.totalScore)}</strong></div>
-        <div class="report-stat"><span>🏆 نشان‌ها:</span><strong>${toFa(badgeCount)} از ${toFa(GAME_KEYS.length * 4)}</strong></div>
+        <div class="report-stat"><span>⏰ زمان بازی امروز:</span><strong><span class="num-isolate">${toFa(playMin)}</span> دقیقه و <span class="num-isolate">${toFa(playSec)}</span> ثانیه</strong></div>
+        <div class="report-stat"><span>🧠 شاخص تسلط (BPI):</span><strong><span class="num-isolate">${toFa(newBPI)}</span> از <span class="num-isolate">${toFa(1000)}</span></strong></div>
+        <div class="report-stat"><span>🔥 روزهای پیاپی:</span><strong><span class="num-isolate">${toFa(state.streak || 0)}</span> روز</strong></div>
+        <div class="report-stat"><span>🏆 نشان‌های کسب‌شده:</span><strong><span class="num-isolate">${toFa(badgeCount)}</span> از <span class="num-isolate">${toFa(GAME_KEYS.length * 4)}</span></strong></div>
+        
         <h3 style="margin-top:20px; color:#0984e3;">پیشرفت هر بازی:</h3>
     `;
 
@@ -494,7 +611,6 @@ function showParentReport() {
         const meta = GAME_META[key];
         const domain = DOMAINS[meta.domain];
         const lvl = getLevel(key);
-        const best = getBest(key);
         const badges = [1,2,3,4].filter(l => hasBadge(key, l)).length;
         html += `
             <div class="report-game">
@@ -502,10 +618,32 @@ function showParentReport() {
                     <i data-lucide="${meta.icon}"></i>
                     <span>${meta.name}</span>
                 </div>
-                <div style="font-size:13px; color:#636e72;">سطح ${toFa(lvl)} | بهترین: ${toFa(best)} | نشان: ${toFa(badges)}/۴</div>
+                <div style="font-size:13px; color:#636e72;">سطح فعلی: <span class="num-isolate">${toFa(lvl)}</span> | نشان‌ها: <span class="num-isolate">${toFa(badges)}</span> از ۴</div>
             </div>
         `;
     });
+
+    html += `
+        <div class="support-box">
+            💡 <strong>چطور همراهی کنیم؟</strong><br>
+            از مقایسه کردن فرزندتان با دیگران خودداری کنید. روی تلاش و پیشرفت او نسبت به خودش تمرکز کنید. یک جلسه کوتاه و شاد، بهتر از یک جلسه طولانی و خسته‌کننده است.
+        </div>
+        
+        <div style="margin-top:20px; padding:15px; background:#f8f9fa; border-radius:10px; border:1px dashed #b2bec3; text-align:center;">
+            <div style="font-weight:800; margin-bottom:10px; color:#2d3436;">📁 مدیریت داده‌ها</div>
+            <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+                <button class="modal-btn primary" style="flex:1; font-size:14px; padding:10px;" onclick="exportData()">💾 دریافت پشتیبان</button>
+                <label class="modal-btn secondary" style="flex:1; font-size:14px; padding:10px; cursor:pointer; text-align:center; display:flex; justify-content:center; align-items:center;">
+                    📂 بازیابی پشتیبان
+                    <input type="file" accept=".json" onchange="importData(event)" style="display:none;">
+                </label>
+            </div>
+        </div>
+
+        <div class="privacy-note" style="margin-top:15px;">
+            🔒 تمام اطلاعات در همین دستگاه (مرورگر) ذخیره می‌شود و به هیچ سروری ارسال نمی‌شود.
+        </div>
+    `;
 
     report.innerHTML = html;
     refreshIcons();
@@ -541,7 +679,7 @@ function renderDailyWorkoutCard() {
     } else {
         card.classList.remove('finished');
         if (state.assessmentCompleted) {
-            desc.innerText = '۳ بازی برای تقویت نقاط ضعف مغزت آماده‌ست! 🧠';
+            desc.innerText = 'این ۳ بازی بر اساس ارزیابی اولیه انتخاب شدن تا روی نقاط ضعفت کار کنیم! 🧠';
         } else {
             desc.innerText = '۳ بازی برای تقویت مغزت آماده‌ست!';
         }
@@ -629,12 +767,33 @@ function showStats() {
 }
 
 function renderStatsPage() {
-    document.getElementById('stats-bpi').innerText = toFa(state.totalScore);
-    document.getElementById('stats-streak').innerText = toFa(state.streak || 0);
+    // ۱. محاسبه BPI جدید بر اساس تسلط (نه امتیاز خام)
+    let totalLevels = 0;
+    for (const key of GAME_KEYS) {
+        totalLevels += getLevel(key); // هر بازی حداکثر ۴ سطح
+    }
+    const maxPossibleLevels = GAME_KEYS.length * 4; // ۱۳ بازی * ۴ سطح = ۵۲
+    
+    const badgeCount = countBadges();
+    const maxPossibleBadges = GAME_KEYS.length * 4; // ۵۲ نشان
+    
+    // ۸۰٪ امتیاز برای سطح‌ها، ۲۰٪ برای نشان‌ها (ضریب ۸۰۰ و ۲۰۰ برای رسیدن به ۱۰۰۰)
+    const levelPart = (totalLevels / maxPossibleLevels) * 800;
+    const badgePart = (badgeCount / maxPossibleBadges) * 200;
+    const newBPI = Math.round(levelPart + badgePart);
 
-    let badgeCount = countBadges();
+    // نمایش BPI و توضیح
+    document.getElementById('stats-bpi').innerText = toFa(newBPI);
+    const bpiDesc = document.getElementById('stats-bpi-desc');
+    if (bpiDesc) {
+        bpiDesc.innerText = 'این شاخص نشان‌دهنده سطح تسلط فعلی شماست (از ۱۰۰۰)';
+    }
+
+    // استریک و نشان‌ها
+    document.getElementById('stats-streak').innerText = toFa(state.streak || 0);
     document.getElementById('stats-badges').innerText = toFa(badgeCount);
 
+    // ۲. رندر کردن نوارهای مهارت
     const domainContainer = document.getElementById('stats-domains');
     domainContainer.innerHTML = '';
 
@@ -645,8 +804,8 @@ function renderStatsPage() {
         let totalLvlProgress = 0;
         gamesInDomain.forEach(k => { totalLvlProgress += (getLevel(k) - 1); });
 
-        const maxPossibleLvl = gamesInDomain.length * 3;
-        const percent = maxPossibleLvl > 0 ? (totalLvlProgress / maxPossibleLvl) * 100 : 0;
+        const maxPossibleLvl = gamesInDomain.length * 3; // سطح ۱ یعنی صفر پیشرفت، سطح ۴ یعنی ۳ مرحله پیشرفت
+        const percent = maxPossibleLvl > 0 ? Math.round((totalLvlProgress / maxPossibleLvl) * 100) : 0;
 
         const row = document.createElement('div');
         row.className = 'domain-row';
@@ -657,6 +816,9 @@ function renderStatsPage() {
             </div>
             <div class="domain-bar-bg">
                 <div class="domain-bar-fill" style="background:${domain.color}; width:0%;" data-target="${percent}%"></div>
+            </div>
+            <div style="font-size:12px; color:${domain.color}; min-width:35px; text-align:left; font-weight:800;">
+                <span class="num-isolate">${toFa(percent)}</span>٪
             </div>
         `;
         domainContainer.appendChild(row);
@@ -867,4 +1029,48 @@ function applyReadFree(enable) {
         const hasVisual = GAME_KEYS.some(k => GAME_META[k].domain === domain && !GAME_META[k].needsText);
         if (!hasVisual) state.selectedDomain = null;
     }
+}
+// ==========================================
+// سیستم پشتیبان‌گیری و بازیابی (Backup/Restore)
+// ==========================================
+function exportData() {
+    playSound('click');
+    try {
+        const dataStr = JSON.stringify(appDB, null, 2);
+        const blob = new Blob([dataStr], {type: "application/json"});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `neuron-club-backup-${new Date().toISOString().slice(0,10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showMascotMessage('فایل پشتیبان با موفقیت ذخیره شد! 📁', 3000);
+    } catch (e) {
+        alert('خطا در ساخت فایل پشتیبان.');
+    }
+}
+
+function importData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const parsed = JSON.parse(e.target.result);
+            if (parsed && parsed.version === 3 && parsed.profiles) {
+                appDB = parsed;
+                saveDatabase(appDB);
+                alert('پشتیبان با موفقیت بازیابی شد! صفحه رفرش می‌شود.');
+                location.reload();
+            } else {
+                alert('فایل نامعتبر است. لطفاً فایل پشتیبان اصلی را انتخاب کنید.');
+            }
+        } catch(err) {
+            alert('خطا در خواندن فایل. مطمئن شوید فایل JSON معتبر است.');
+        }
+    };
+    reader.readAsText(file);
 }

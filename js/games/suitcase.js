@@ -234,9 +234,12 @@ function handleSuitcaseClick(r, c, cell) {
             updateGameScore();
             
             const mirrorCell = document.querySelector(`#${prefix}-grid-b .suitcase-cell[data-r="${mirrorR}"][data-c="${mirrorC}"]`);
+            
+            // 👈 انیمیشن برخورد
             if (mirrorCell) {
                 mirrorCell.classList.add('wrong');
                 mirrorCell.style.zIndex = '20';
+                mirrorCell.innerHTML = '💥'; // نمایش برخورد
             }
             
             fb.style.color = '#d63031';
@@ -244,6 +247,7 @@ function handleSuitcaseClick(r, c, cell) {
             
             if (registerWrong()) return;
 
+            // باز شدن چمدان برای درک بهتر
             gameTimeout(() => {
                 if (!suitcaseState) return;
                 halfAEl.classList.remove('folding');
@@ -252,6 +256,7 @@ function handleSuitcaseClick(r, c, cell) {
                 if (mirrorCell) {
                     mirrorCell.classList.remove('wrong');
                     mirrorCell.style.zIndex = '';
+                    mirrorCell.innerHTML = mirrorItem; // برگرداندن وسیله
                 }
                 
                 gameTimeout(() => {
@@ -260,9 +265,9 @@ function handleSuitcaseClick(r, c, cell) {
                     fb.innerText = '';
                     renderSuitcaseGrid();
                     startSuitcaseTimer();
-                }, 300);
+                }, 500);
 
-            }, 1500); 
+            }, 2000); 
         }
     }, 800); 
 }
@@ -297,3 +302,4 @@ GAME_RESUME_HOOKS.suitcase = () => {
         startSuitcaseTimer();
     }
 };
+GAME_CLEANUP_HOOKS.suitcase = () => { suitcaseState = null; };

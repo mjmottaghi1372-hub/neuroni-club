@@ -226,3 +226,5 @@ GAME_PAUSE_HOOKS.stroop_junior = stroopPause;
 GAME_PAUSE_HOOKS.stroop_senior = stroopPause;
 GAME_RESUME_HOOKS.stroop_junior = stroopResume;
 GAME_RESUME_HOOKS.stroop_senior = stroopResume;
+GAME_CLEANUP_HOOKS.stroop_junior = () => { stroopState = null; };
+GAME_CLEANUP_HOOKS.stroop_senior = GAME_CLEANUP_HOOKS.stroop_junior;

@@ -56,7 +56,7 @@ async function dbDelete(key) {
 }
 
 // ساخت یک پروفایل جدید بر اساس نقش (مامان، بابا و...)
-function createDefaultState(roleId, name = '', avatar = '👤') {
+function createDefaultState(roleId, name = '', avatar = '👤', ageGroup = 'child') {
     const games = {};
     for (const key of GAME_KEYS) {
         games[key] = {
@@ -69,11 +69,14 @@ function createDefaultState(roleId, name = '', avatar = '👤') {
         };
     }
     return {
-        profileId: roleId, // آیدی نقش (مثلا child1, mom, dad)
+        profileId: roleId,
         profileName: name,
         avatar: avatar,
+        ageGroup: ageGroup, // 👈 گروه سنی جدید
         version: 3,
         totalScore: 0,
+        dailyScore: 0,      // 👈 امتیاز روزانه جدید
+        dailyScoreDate: null, // 👈 تاریخ امتیاز روزانه
         streak: 0,
         lastPlayDate: null,
         readFreeMode: false,
@@ -140,12 +143,11 @@ async function loadDatabase() {
     try {
         const stored = await dbGet(STATE_KEY);
         
-        // اگر دیتابیس نسخه ۳ (چند کاربره با نقش) بود
         if (stored && stored.version === 3) {
-            return stored;
+            // 👈 اعتبارسنجی داده‌ها
+            return validateDatabase(stored);
         }
 
-        // اگر دیتابیس نسخه ۲ (تک کاربره قدیمی) بود -> مهاجرت به نسخه ۳
         if (stored && stored.version === 2) {
             const newDB = {
                 version: 3,
@@ -155,21 +157,19 @@ async function loadDatabase() {
                 }
             };
             await saveDatabase(newDB);
-            return newDB;
+            return validateDatabase(newDB);
         }
 
-        // اگر هیچی نبود، از localStorage چک کن
         const migrated = migrateFromLocalStorage();
         if (migrated) {
             await saveDatabase(migrated);
-            return migrated;
+            return validateDatabase(migrated);
         }
 
-        // اگر کاربر کاملاً جدید بود، دیتابیس خالی با ساختار نقش‌ها بساز
         const freshDB = {
             version: 3,
             activeProfileId: null,
-            profiles: {} // خالی شروع می‌شه تا کاربر نقش‌ها رو پر کنه
+            profiles: {}
         };
         await saveDatabase(freshDB);
         return freshDB;
@@ -177,6 +177,33 @@ async function loadDatabase() {
         console.error('DB load failed:', e);
         return { version: 3, activeProfileId: null, profiles: {} };
     }
+}
+
+// 👈 تابع جدید اعتبارسنجی
+function validateDatabase(dbData) {
+    if (!dbData.profiles) dbData.profiles = {};
+    
+    for (const roleId in dbData.profiles) {
+        const p = dbData.profiles[roleId];
+        if (!p.games) p.games = {};
+        
+        // چک کردن تمام بازی‌ها
+        for (const key of GAME_KEYS) {
+            if (!p.games[key]) {
+                p.games[key] = { level: 1, best: 0, bestTime: null, badges: { 1: false, 2: false, 3: false, 4: false }, tutorialSeen: false, introSeen: false };
+            }
+            if (!p.games[key].badges) p.games[key].badges = { 1: false, 2: false, 3: false, 4: false };
+        }
+        
+        if (!p.gameHistory) p.gameHistory = [];
+        if (p.totalScore === undefined) p.totalScore = 0;
+        if (p.streak === undefined) p.streak = 0;
+        if (p.ageGroup === undefined) p.ageGroup = 'child';
+        if (p.dailyScore === undefined) p.dailyScore = 0;
+        if (!p.dailyWorkout) p.dailyWorkout = { date: null, games: [], completed: [] };
+        if (!p.cognitiveProfile) p.cognitiveProfile = { working_memory: null, attention: null, processing_speed: null, flexibility: null, problem_solving: null };
+    }
+    return dbData;
 }
 
 async function saveDatabase(dbData) {

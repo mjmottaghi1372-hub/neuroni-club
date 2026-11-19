@@ -134,3 +134,4 @@ if (!shapehuntState || !shapehuntState.active) return;    if (!shapehuntState.ti
         }, 1000);
     }
 };
+GAME_CLEANUP_HOOKS.shapehunt = () => { shapehuntState = null; clearShapehuntTimer(); };

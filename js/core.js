@@ -273,30 +273,6 @@ function clearAllGameTimers() {
 // ============ Pause ============
 let isPaused = false;
 
-function togglePause() {
-    if (!gameInProgress) return;
-    if (isPaused) resumeGame();
-    else pauseGame();
-}
-
-function pauseGame() {
-    if (!gameInProgress) return;
-    isPaused = true;
-    document.getElementById('pause-overlay').style.display = 'flex';
-    Object.values(timerAnimations).forEach(a => { try { a.pause(); } catch(e) {} });
-    if (GAME_PAUSE_HOOKS[currentGame]) {
-        try { GAME_PAUSE_HOOKS[currentGame](); } catch(e) {}
-    }
-}
-
-function resumeGame() {
-    isPaused = false;
-    document.getElementById('pause-overlay').style.display = 'none';
-    Object.values(timerAnimations).forEach(a => { try { a.play(); } catch(e) {} });
-    if (GAME_RESUME_HOOKS[currentGame]) {
-        try { GAME_RESUME_HOOKS[currentGame](); } catch(e) {}
-    }
-}
 
 // ============ SVG Helpers ============
 function getShapeSVG(shape) {
@@ -310,4 +286,67 @@ function getShapeSVG(shape) {
     if (hasDot) content += `<circle cx="${c}" cy="${c}" r="${size/6}" fill="white"/>`;
     const transform = rotation ? `transform="rotate(${rotation} ${c} ${c})"` : '';
     return `<svg viewBox="0 0 ${size} ${size}"><g ${transform}>${content}</g></svg>`;
+}
+// ============ Centralized State Machine ============
+const AppState = {
+    IDLE: 'idle',
+    TUTORIAL: 'tutorial',
+    PLAYING: 'playing',
+    PAUSED: 'paused',
+    RESULT: 'result'
+};
+
+let currentAppState = AppState.IDLE;
+
+function setAppState(newState) {
+    currentAppState = newState;
+    
+    // مدیریت خودکار تایمرها و المان‌ها بر اساس وضعیت
+    if (newState === AppState.PAUSED) {
+        document.getElementById('pause-overlay').style.display = 'flex';
+        activeGameTimeouts.forEach(t => {
+            clearTimeout(t.nativeId);
+            t.remaining = Math.max(0, t.ms - (Date.now() - t.startTime));
+        });
+        Object.values(timerAnimations).forEach(a => { try { a.pause(); } catch(e) {} });
+    } else {
+        document.getElementById('pause-overlay').style.display = 'none';
+    }
+
+    if (newState === AppState.PLAYING || newState === AppState.IDLE) {
+        document.getElementById('interference-overlay').style.display = 'none';
+    }
+}
+
+function togglePause() {
+    if (!gameInProgress) return;
+    if (currentAppState === AppState.PAUSED) {
+        resumeGame();
+    } else {
+        pauseGame();
+    }
+}
+
+function pauseGame() {
+    if (!gameInProgress) return;
+    setAppState(AppState.PAUSED);
+    if (GAME_PAUSE_HOOKS[currentGame]) {
+        try { GAME_PAUSE_HOOKS[currentGame](); } catch(e) {}
+    }
+}
+
+function resumeGame() {
+    setAppState(AppState.PLAYING);
+    activeGameTimeouts.forEach((t, id) => {
+        t.startTime = Date.now();
+        t.nativeId = setTimeout(() => {
+            activeGameTimeouts.delete(id);
+            t.fn();
+        }, t.remaining);
+    });
+    Object.values(timerAnimations).forEach(a => { try { a.play(); } catch(e) {} });
+    
+    if (GAME_RESUME_HOOKS[currentGame]) {
+        try { GAME_RESUME_HOOKS[currentGame](); } catch(e) {}
+    }
 }

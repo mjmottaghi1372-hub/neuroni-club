@@ -263,3 +263,4 @@ function showScatterQuestion() {
 }
 
 GAME_STARTERS.scattermem = startScattermem;
+GAME_CLEANUP_HOOKS.scattermem = () => { scattermemState = null; };

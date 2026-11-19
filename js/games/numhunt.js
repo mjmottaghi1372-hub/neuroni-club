@@ -274,3 +274,5 @@ GAME_RESUME_HOOKS.numhunt_junior = () => {
     }
 };
 GAME_RESUME_HOOKS.numhunt_senior = GAME_RESUME_HOOKS.numhunt_junior;
+GAME_CLEANUP_HOOKS.numhunt_junior = () => { numhuntState = null; clearNumhuntTimer(); };
+GAME_CLEANUP_HOOKS.numhunt_senior = GAME_CLEANUP_HOOKS.numhunt_junior;
